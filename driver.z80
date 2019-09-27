@@ -142,15 +142,15 @@ order3: dw tfau_bass, silence3
 order4: dw empty, empty
 
 lunawaves:
-include "lunawaves.inc"
+include "TestPatterns/lunawaves.inc"
 unreal:
-include "unreal.inc"
+include "TestPatterns/unreal.inc"
 unreal_arps:
-include "unreal_arps.inc"
+include "TestPatterns/unreal_arps.inc"
 tfau_arps:
-include "tfau_arps.inc"
+include "TestPatterns/tfau_arps.inc"
 tfau_bass:
-include "tfau_bass.inc"
+include "TestPatterns/tfau_bass.inc"
 empty:
 rept 64
     dn ___, 0, 0
