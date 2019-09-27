@@ -136,9 +136,9 @@ ENDM
 SECTION "Song Data", ROM0
 ;; order_cnt is the number of orders times 2
 order_cnt: db 4
-order1: dw tfau_arps, unreal
-order2: dw silence, unreal_arps
-order3: dw tfau_bass, silence3
+order1: dw empty, empty
+order2: dw empty, empty
+order3: dw tfau_bass, tfau_bass2
 order4: dw empty, empty
 
 lunawaves:
@@ -151,6 +151,19 @@ tfau_arps:
 include "TestPatterns/tfau_arps.inc"
 tfau_bass:
 include "TestPatterns/tfau_bass.inc"
+tfau_bass2:
+include "TestPatterns/tfau_bass2.inc"
+wavechange:
+rept 8
+    dn C_4, 2, 0
+    dn ___, 0, 0
+    dn ___, 0, 0
+    dn ___, 0, 0
+    dn C_4, 3, 0
+    dn ___, 0, 0
+    dn ___, 0, 0
+    dn ___, 0, 0
+endr
 empty:
 rept 64
     dn ___, 0, 0
@@ -298,6 +311,12 @@ voice_instrument:
 .wave:     db 0
 .highmask: db %10000000
 
+voice_instrument2:
+.length:   db 0
+.volume:   db %00100000
+.wave:     db 1
+.highmask: db %10000000
+
 ;; Format for channel 4:
 
 noise_instrument:
@@ -307,6 +326,17 @@ noise_instrument:
 .highmask:        db %10000000
 
 routines:
+
+;; nothing yet
+
+waves:
+rept 16
+db %11110000
+endr
+rept 8
+db %11111111
+db %00000000
+endr
 
 ;; nothing yet
 
@@ -323,6 +353,9 @@ row_break: db
 
 ;; TODO: Find some way to get rid of this thing.
 temp_note_value: dw
+row: db
+tick: db
+current_wave: db
 
 ;; Size of a channel in bytes
 CHANNEL_SIZE EQU 8
@@ -375,9 +408,6 @@ vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
 
-row: ds 1
-tick: ds 1
-
 ; Initialization
 SECTION "main", ROM0[$0150]
 jp _init
@@ -414,7 +444,7 @@ _init:
     call _paint_tile
 
     ;; Load some wave data (or code) into _AUD3WAVERAM
-    ld hl, $000 ;; note_table
+    ld hl, waves ;; note_table
 _addr = _AUD3WAVERAM
     REPT 16
     ld a, [hl+]
@@ -566,11 +596,11 @@ _update_channel:
     ld a, b
 
     cp 3
-    jp z, _update_channel4
+    jr z, _update_channel4
     cp 2
-    jp z, _update_channel3
+    jr z, _update_channel3
     cp 1
-    jp z, _update_channel2
+    jr z, _update_channel2
 
 _update_channel1:
     ld hl, highmask1
@@ -834,7 +864,7 @@ fx_set_duty:
 
     ld a, b
     or a ; cp 0
-    jp z, .chan1
+    jr z, .chan1
 .chan2:
     ld a, c
     ld [rAUD2LEN], a
@@ -884,11 +914,11 @@ fx_vol_slide:
     and %11110000
     swap a
     sub d
-    jp nc, .cont1
+    jr nc, .cont1
     ld a, 0
 .cont1:
     add e
-    jp nc, .cont2
+    jr nc, .cont2
     ld a, $F
 .cont2:
     swap a
@@ -914,7 +944,7 @@ fx_note_delay:
 
     ;; free registers: A, D, E, H, L
 
-    jp nz, .play_note
+    jr nz, .play_note
 
     ;; Just store the note into the channel period, and don't play a note.
     ld d, 0
@@ -1004,7 +1034,7 @@ fx_note_cut:
     ret nz
 
     ld d, 0
-    jp set_channel_volume
+    jr set_channel_volume
 
 fx_set_volume:
     ret nz ;; Return if we're not on tick zero.
@@ -1317,6 +1347,10 @@ loadShort: MACRO
 ENDM
 
 _setup_instrument_pointer:
+    ;; Call with:
+    ;; Instrument/High nibble of effect in B
+    ;; Stores whether the instrument was real in the Z flag
+    ;; Stores the instrument pointer in DE
     ld a, b
     and %11110000
     swap a
@@ -1378,7 +1412,7 @@ _dosound:
 
     jr nc, .after_note1
 
-    call _playnote1 ; 3 bytes
+    call _playnote1
 
 .after_note1:
     loadShort pattern2, b, c
@@ -1417,12 +1451,19 @@ _dosound:
 
     jr nc, .after_note2
 
-    call _playnote2 ; 3 bytes
+    call _playnote2
 
 .after_note2:
     loadShort pattern3, b, c
     ld de, channel_note3
     call _lookup_note
+
+    ;; Any reason not to do this here?
+    ld a, h
+    ld [temp_note_value], a
+    ld a, l
+    ld [temp_note_value+1], a
+
     push af
 
     jr nc, .do_setvol3
@@ -1438,22 +1479,37 @@ _dosound:
     ld a, [de]
     inc de
     ld [rAUD3LEVEL], a
-    ;; TODO: Write to _AUD3WAVERAM
-    ; ld a, [de]
-    ; ld [rAUD3ENV], a
+    ld a, [de]
     inc de
+
+    ;; Check to see if we need to copy a wave and then do so
+    ld hl, current_wave
+    cp [hl]
+    jr z, .no_wave_copy
+    ld [hl], a
+    swap a
+    ld hl, waves
+    add_a_to_hl
+    ld a, 0
+    ld [rAUD3ENA], a
+
+_addr = _AUD3WAVERAM
+    REPT 16
+    ld a, [hl+]
+    ldh [_addr], a
+_addr = _addr + 1
+    ENDR
+
+    ld a, %10000000
+    ld [rAUD3ENA], a
+
+.no_wave_copy:
     ld a, [de]
 
 .write_mask3:
     ld [highmask3], a
 
 .do_setvol3:
-    ld a, h
-    ld [temp_note_value], a
-    ld a, l
-    ld [temp_note_value+1], a
-
-
     ld e, 2
     call _doeffect
 
@@ -1461,7 +1517,7 @@ _dosound:
 
     jr nc, .after_note3
 
-    call _playnote3 ; 3 bytes
+    call _playnote3
 
 .after_note3:
     loadShort pattern4, b, c
@@ -1503,11 +1559,11 @@ _dosound:
 
     jr nc, .after_note4
 
-    call _playnote4 ; 3 bytes
+    call _playnote4
 
 .after_note4:
     ;; finally just update the tick/order/row values
-    jp process_tick
+    jr process_tick
 
 .process_effects:
     ;; Only do effects if not on tick zero
