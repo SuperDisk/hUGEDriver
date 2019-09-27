@@ -1,9 +1,8 @@
 ;; hUGETracker playback routine
 ;; Written by SuperDisk 2019
 
-include "hardware.inc"
-include "constants.inc"
-include "debug_macros.inc"
+include "hardware.inc/hardware.inc"
+include "include/notes.inc"
 
 add_a_to_r16: MACRO
     add a, \2
@@ -40,92 +39,10 @@ ret_dont_call_playnote: MACRO
 ENDM
 
 ; Constants
-STACK_SIZE EQU $7A
-;; Stack starts at $FFFE
 
 PATTERN_LENGTH EQU 64
 ; TICKS EQU 4
 
-; $0000 - $003F: RST handlers.
-
-SECTION "restarts", ROM0[$0000]
-ret
-REPT 7
-    nop
-ENDR
-; $0008
-ret
-REPT 7
-    nop
-ENDR
-; $0010
-ret
-REPT 7
-    nop
-ENDR
-; $0018
-ret
-REPT 7
-    nop
-ENDR
-; $0020
-ret
-REPT 7
-    nop
-ENDR
-; $0028
-ret
-REPT 7
-    nop
-ENDR
-; $0030
-ret
-REPT 7
-    nop
-ENDR
-; $0038
-ret
-REPT 7
-    nop
-ENDR
-
-; Interrupt addresses
-SECTION "Vblank interrupt", ROM0[$0040]
-    reti
-
-SECTION "LCD controller status interrupt", ROM0[$0048]
-    call _dosound
-    reti
-
-SECTION "Timer overflow interrupt", ROM0[$0050]
-    reti
-
-SECTION "Serial transfer completion interrupt", ROM0[$0058]
-    reti
-
-SECTION "P10-P13 signal low edge interrupt", ROM0[$0060]
-    reti
-
-; Reserved stack space
-SECTION "Stack", HRAM[$FFFE - STACK_SIZE]
-    ds STACK_SIZE
-
-
-; Control starts here, but there's more ROM header several bytes later, so the
-; only thing we can really do is immediately jump to after the header
-SECTION "init", ROM0[$0100]
-    nop
-    jp $0150
-
-SECTION "romname", ROM0[$0134]
-; $0134 - $013E: The title, in upper-case letters, followed by zeroes.
-DB "HUGE"
-DS 7 ; padding
-; $013F - $0142: The manufacturer code. Empty for now
-DS 4
-DS 1
-; $0144 - $0145: "New" Licensee Code, a two character name.
-DB "NF"
 
 dn: MACRO ;; (note, instr, effect)
     db \1
@@ -316,7 +233,7 @@ pattern2: dw
 pattern3: dw
 pattern4: dw
 
-ticks_per_row: db
+ticks_per_row:: db
 current_order: dw
 next_order: dw
 row_break: db
@@ -339,7 +256,7 @@ channel_period1: dw
 toneporta_target1: dw
 channel_note1: db
 vibrato_tremolo_phase1: db
-envelope1: db
+envelope1:: db
 highmask1: db
 
 ;;;;;;;;;;;
@@ -350,7 +267,7 @@ channel_period2: dw
 toneporta_target2: dw
 channel_note2: db
 vibrato_tremolo_phase2: db
-envelope2: db
+envelope2:: db
 highmask2: db
 
 ;;;;;;;;;;;
@@ -378,98 +295,10 @@ highmask4: db
 row: ds 1
 tick: ds 1
 
-; Initialization
-SECTION "main", ROM0[$0150]
-jp _init
 
-_paint_tile:
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
-    ret
+SECTION "Sound driver", ROM0
 
-_init:
-    ; Set LCD palette for grayscale mode; yes, it has a palette
-    ld a, %11100100
-    ld [$FF00+$47], a
-
-    ;; Fill with pattern
-    ld hl, $8000
-    ld bc, `10000000
-    call _paint_tile
-    ld bc, `01000000
-    call _paint_tile
-    ld bc, `00100000
-    call _paint_tile
-    ld bc, `00010000
-    call _paint_tile
-    ld bc, `00001000
-    call _paint_tile
-    ld bc, `00000100
-    call _paint_tile
-    ld bc, `00000010
-    call _paint_tile
-    ld bc, `00000001
-    call _paint_tile
-
-    ;; Load some wave data (or code) into _AUD3WAVERAM
-    ld hl, $000 ;; note_table
-_addr = _AUD3WAVERAM
-    REPT 16
-    ld a, [hl+]
-    ld [_addr], a
-_addr = _addr + 1
-    ENDR
-
-    ;; Enable chanel 3
-    ld a, %10000000
-    ld [rAUD3ENA], a
-    ld a, $ff ;; full length (although this does nothing)
-    ld [rAUD3LEN], a
-    ld a, %0000000 ; 0%
-    ld [rAUD3LEVEL], a
-
-    ld a, %11110000
-    ld [envelope1], a
-    ld a, %11110000
-    ld [envelope2], a
-
-    ;; Load starting speed (7 ticks per row)
-    ld a, 7
-    ld [ticks_per_row], a
-
-    ; Enable sound globally
-    ld a, $80
-    ld [rAUDENA], a
-    ; Enable all channels in stereo
-    ld a, $FF
-    ld [rAUDTERM], a
-    ; Set volume
-    ld a, $77
-    ld [rAUDVOL], a
-
-    ld c, 0 ;; Current order index
-    call _refresh_patterns
-
-    ;; Enable the timer
-    ; ld a, TACF_START | TACF_4KHZ
-    ; ld [rTAC], a
-
-    ;; Enable the HBlank interrupt on scanline 0
-    ld a, [rSTAT]
-    or a, STATF_LYC
-    ld [rSTAT], a
-    xor a ; ld a, 0
-    ld [rLYC], a
-
-    ld a, IEF_LCDC ; IEF_VBLANK;  | IEF_LCDC ; IEF_HILO | IEF_TIMER
-    ld [rIE], a
-    ei
-
-    jp _halt
-
-_refresh_patterns:
+_refresh_patterns::
 ;; Loads pattern registers with pointers to correct pattern based on
 ;; an order index
 
@@ -1333,7 +1162,7 @@ _setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
-_dosound:
+_dosound::
     ld a, [tick]
     or a
     jp nz, .process_effects
@@ -1637,15 +1466,7 @@ _noreset:
     ld [row], a
     ret
 
-_halt:
-    ; Do nothing, forever
-    halt
-_nop:
-    nop
-    jr _halt
-
-SECTION "Wave stuff", ROM0
 
 SECTION "Note Table", ROM0
 note_table:
-include "music.inc"
+include "note_table.inc"

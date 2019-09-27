@@ -1,9 +1,14 @@
 @echo off
-rgbasm -odriver.obj driver.z80
+
+mkdir obj
+mkdir bin
+
+rgbasm -o obj\driver.o src\driver.asm
 if %errorlevel% neq 0 call :exit 1
-rgblink -mdriver.map -ndriver.sym -odriver.gb driver.obj
+
+rgblink -m bin\hUGEDriver.map -n bin\hUGEDriver.sym -o bin\hUGEDriver.gb obj\driver.o
 if %errorlevel% neq 0 call :exit 1
-rgbfix -p0 -v driver.gb
+rgbfix -p 0xFF -v bin\hUGEDriver.gb
 if %errorlevel% neq 0 call :exit 1
 call :exit 0
 
