@@ -2,3 +2,5 @@
 *.gb
 *.sym
 *.obj
+*.lnk
+obj/
