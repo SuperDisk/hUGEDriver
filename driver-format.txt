@@ -29,3 +29,24 @@ C - Set volume
 D - Pattern break
 E - Note cut
 F - Set speed
+
+Instrument formats
+
+-=-=-Square-=-=-
+1: Sweep NR10
+2: Length NR11
+3: Envelope NR12
+4: Highmask (%xy______) where X is set if it is a trigger note
+   (should always be 1) and Y is the length enabled flag
+
+-=-=-Voice-=-=-
+1: Length NR31
+2: Sound level NR32
+3: Waveform number associated with this instrument
+4: Highmask as shown before
+
+-=-=-Noise-=-=-
+1: Length NR41
+2: Envelope NR42
+3: Polynomial counter NR43
+4: Highmask as shown before

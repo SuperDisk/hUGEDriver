@@ -114,8 +114,9 @@ SECTION "Stack", HRAM[$FFFE - STACK_SIZE]
 ; Control starts here, but there's more ROM header several bytes later, so the
 ; only thing we can really do is immediately jump to after the header
 SECTION "init", ROM0[$0100]
+    di
+    jp _init
     nop
-    jp $0150
 
 SECTION "romname", ROM0[$0134]
 ; $0134 - $013E: The title, in upper-case letters, followed by zeroes.
@@ -135,10 +136,10 @@ ENDM
 
 SECTION "Song Data", ROM0
 ;; order_cnt is the number of orders times 2
-order_cnt: db 4
-order1: dw empty, empty
+order_cnt: db 2
+order1: dw unreal, empty
 order2: dw empty, empty
-order3: dw tfau_bass, tfau_bass2
+order3: dw empty, tfau_bass2
 order4: dw empty, empty
 
 lunawaves:
@@ -301,7 +302,7 @@ square_instrument:
 .sweep:           db ; unused for channel 2
 .length_and_duty: db %10000001
 .envelope:        db %11110000
-.highmask:        db %11000000
+.highmask:        db %10000000
 
 ;; Format for channel 3:
 
@@ -341,6 +342,7 @@ endr
 ;; nothing yet
 
 SECTION "Playback variables", WRAM0
+_start_vars:
 pattern1: dw
 pattern2: dw
 pattern3: dw
@@ -408,6 +410,9 @@ vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
 
+
+_end_vars:
+
 ; Initialization
 SECTION "main", ROM0[$0150]
 jp _init
@@ -464,6 +469,15 @@ _addr = _addr + 1
     ld [envelope1], a
     ld a, %11110000
     ld [envelope2], a
+
+    ;; Zero some ram
+    ld a, _end_vars - _start_vars
+    ld hl, _start_vars
+.fill_loop:
+    ld [hl], 0
+    inc hl
+    dec a
+    jp nz, .fill_loop
 
     ;; Load starting speed (7 ticks per row)
     ld a, 7
