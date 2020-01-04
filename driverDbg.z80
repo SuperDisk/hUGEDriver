@@ -5,8 +5,6 @@ include "hardware.inc"
 include "constants.inc"
 include "debug_macros.inc"
 
-include "constants.htt"
-
 add_a_to_r16: MACRO
     add a, \2
     ld \2, a
@@ -46,6 +44,7 @@ STACK_SIZE EQU $7A
 ;; Stack starts at $FFFE
 
 PATTERN_LENGTH EQU 64
+; TICKS EQU 4
 
 ; $0000 - $003F: RST handlers.
 
@@ -140,13 +139,278 @@ SECTION "Song Data", ROM0
 ;; Orders
 ;;;;;;;;;;;
 
-include "order.htt"
+order_cnt: db 18
+order1: dw P0,P0,P0,P0,P0,P0,P0,P0,P0,P0
+order2: dw P1,P0,P0,P0,P0,P0,P0,P0,P0,P0
+order3: dw P2,P0,P0,P0,P0,P0,P0,P0,P0,P0
+order4: dw P3,P0,P0,P0,P0,P0,P0,P0,P0,P0
+
 
 ;;;;;;;;;;;;
 ;; Patterns
 ;;;;;;;;;;;;
 
-include "pattern.htt"
+P0:
+ dn C_4,1,$000
+ dn C#4,1,$000
+ dn D_4,1,$000
+ dn D#4,1,$000
+ dn E_4,1,$000
+ dn F_4,1,$000
+ dn F#4,1,$000
+ dn G_4,1,$000
+ dn G#4,1,$000
+ dn A_4,1,$000
+ dn A#4,1,$000
+ dn B_4,1,$000
+ dn C_5,1,$000
+ dn C#5,1,$000
+ dn D_5,1,$000
+ dn D#5,1,$000
+ dn E_5,1,$000
+ dn F_5,1,$000
+ dn F#5,1,$000
+ dn G_5,1,$000
+ dn G#5,1,$000
+ dn A_5,1,$000
+ dn A#5,1,$000
+ dn C_6,1,$000
+ dn C#6,1,$000
+ dn D_6,1,$000
+ dn D#6,1,$000
+ dn E_6,1,$000
+ dn F_6,1,$000
+ dn F#6,1,$000
+ dn G_6,1,$000
+ dn G#6,1,$000
+ dn A_6,1,$000
+ dn D_5,1,$000
+ dn C_5,1,$000
+ dn D#5,1,$000
+ dn C_5,1,$000
+ dn C_5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn D_5,1,$000
+ dn D#5,1,$000
+ dn D_5,1,$000
+ dn D_5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn C_5,1,$000
+ dn C#5,1,$000
+ dn D#5,1,$000
+ dn C_5,1,$000
+ dn D#5,1,$000
+ dn C_5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn D_5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn D_5,1,$000
+ dn D#5,1,$000
+ dn D#5,1,$000
+ dn D_5,1,$000
+ dn D#5,1,$000
+P1:
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+P2:
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+P3:
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+ dn ___,0,$000
+
 
 ;;;;;;;;;;;;;;;;
 ;; Instruments
@@ -156,7 +420,22 @@ include "pattern.htt"
 
 instruments:
 
-include "instrument.htt"
+inst1: db 8,128,240,128
+inst2: db 8,128,240,128
+inst3: db 8,128,240,128
+inst4: db 8,128,240,128
+inst5: db 8,128,240,128
+inst6: db 8,128,240,128
+inst7: db 8,128,240,128
+inst8: db 8,128,240,128
+inst9: db 8,128,240,128
+inst10: db 8,128,240,128
+inst11: db 8,128,240,128
+inst12: db 8,128,240,128
+inst13: db 8,128,240,128
+inst14: db 8,128,240,128
+inst15: db 8,128,240,128
+
 
 ;;;;;;;;;;;;;
 ;; Routines
@@ -164,30 +443,40 @@ include "instrument.htt"
 
 routines:
 
-; include "routine.htt"
-
 ;;;;;;;;;
 ;; Waves
 ;;;;;;;;;
 
 waves:
 
-include "wave.htt"
+wave0: db 3,10,1,9,10,8,6,11,4,5,1,7,6,1,11,11,6,12,13,4,4,2,9,7,0,2,3,1,6,12,4,0,8
+wave1: db 7,2,13,4,0,0,2,5,7,4,3,13,10,14,12,13,0,12,11,10,13,8,10,11,2,1,9,3,5,10,1,6,11
+wave2: db 8,6,4,9,4,12,8,3,3,11,14,2,2,5,12,5,12,9,9,11,0,3,6,2,9,12,1,1,8,5,4,6,11
+wave3: db 9,12,3,5,0,11,13,12,11,13,4,12,8,0,2,11,7,6,7,4,7,2,2,6,13,4,5,11,2,1,12,6,7
+wave4: db 0,14,5,2,14,4,3,8,6,7,3,5,8,9,12,2,10,5,4,1,5,11,9,12,6,9,7,12,5,14,11,1,6
+wave5: db 7,11,9,6,9,9,9,8,11,6,2,9,12,2,6,14,5,14,3,3,10,5,10,9,1,7,0,3,9,13,13,6,13
+wave6: db 11,1,14,14,6,13,10,2,2,10,0,14,14,11,7,0,1,5,2,3,1,13,5,3,5,1,5,1,1,9,4,6,12
+wave7: db 1,3,10,2,11,6,3,5,5,0,0,0,7,10,13,0,13,9,8,8,8,14,0,10,13,13,6,11,6,11,0,13,10
+wave8: db 2,14,3,10,8,6,7,6,2,11,10,7,11,8,13,3,11,14,3,5,11,3,2,12,7,12,0,4,14,1,13,13,6
+wave9: db 14,7,5,7,0,10,3,6,13,4,8,7,0,4,14,14,5,12,3,14,13,4,1,5,7,12,1,8,0,5,6,6,8
+wave10: db 7,3,6,13,13,14,4,12,9,6,7,5,14,2,0,10,10,14,14,5,3,10,13,10,2,3,2,8,1,7,8,1,0
+wave11: db 6,6,3,7,0,2,10,7,11,10,0,3,8,3,2,0,11,8,4,0,13,7,8,9,7,10,5,4,9,4,4,1,0
+wave12: db 7,8,13,12,1,2,0,2,4,4,6,10,1,4,5,10,12,1,3,13,10,0,3,10,0,9,6,5,0,2,6,14,12
+wave13: db 8,4,2,13,11,13,3,10,3,11,9,9,8,0,12,6,3,8,5,6,0,3,7,13,11,11,0,7,11,12,2,3,7
+wave14: db 8,9,11,5,10,7,5,4,7,7,8,5,7,10,2,13,3,6,8,10,3,9,2,0,10,9,2,14,1,0,12,3,13
+wave15: db 5,1,13,13,5,10,0,7,12,2,3,0,11,13,11,12,7,3,14,1,1,9,5,3,14,2,13,4,11,5,5,7,6
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 SECTION "Playback variables", WRAM0
-_start_vars:
-
-
 pattern1: dw
 pattern2: dw
 pattern3: dw
 pattern4: dw
 
 ticks_per_row: db
-current_order: db
+current_order: dw
 next_order: dw
 row_break: db
 
@@ -248,8 +537,6 @@ vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
 
-_end_vars:
-
 ; Initialization
 SECTION "main", ROM0[$0150]
 jp _init
@@ -307,19 +594,8 @@ _addr = _addr + 1
     ld a, %11110000
     ld [envelope2], a
 
-    ;; Zero some ram
-IF !DEF(PREVIEW_MODE)
-    ld a, _end_vars - _start_vars
-    ld hl, _start_vars
-.fill_loop:
-    ld [hl], 0
-    inc hl
-    dec a
-    jp nz, .fill_loop
-ENDC
-
     ;; Load starting speed (7 ticks per row)
-    ld a, TICKS
+    ld a, 7
     ld [ticks_per_row], a
 
     ; Enable sound globally
@@ -332,8 +608,7 @@ ENDC
     ld a, $77
     ld [rAUDVOL], a
 
-    ld a, [current_order]
-    ld c, a ;; Current order index
+    ld c, 0 ;; Current order index
     call _refresh_patterns
 
     ;; Enable the timer
@@ -585,10 +860,6 @@ _quantize_channel4_note:
     ld a, d
     rla
     or c
-
-    ld e, a
-    ld a, $F
-    sub e
     swap a
     ret
 
@@ -722,12 +993,13 @@ fx_set_duty:
 
     ld a, b
     or a ; cp 0
-    ld a, c
     jr z, .chan1
 .chan2:
+    ld a, c
     ld [rAUD2LEN], a
     ret
 .chan1:
+    ld a, c
     ld [rAUD1LEN], a
     ret
 
@@ -747,13 +1019,12 @@ fx_vol_slide:
     ld d, 0
     call setup_channel_pointer
     ld a, [hl+]
-    ld [temp_note_value+1], a
-    ld a, [hl]
-    ld [temp_note_value], a
+    ld e, [hl]
+    ld d, a
 
     ld a, b
     add a
-    ld hl, _envelope_registers
+    ld hl, .envelope_registers
     add_a_to_hl
     ld a, [hl+]
     ld h, [hl]
@@ -767,7 +1038,6 @@ fx_vol_slide:
     ld a, c
     and %11110000
     ld e, a
-    swap e
 
     ld a, [hl]
     and %11110000
@@ -777,29 +1047,24 @@ fx_vol_slide:
     ld a, 0
 .cont1:
     add e
-    cp $10
-    jr c, .cont2
+    jr nc, .cont2
     ld a, $F
 .cont2:
     swap a
     ld [hl+], a
 
+    ld [hl], d
     inc hl
-    ld a, [hl]
+    ld a, e
     or %10000000
     ld [hl], a
 
-    ld hl, _play_note_routines
-    ld a, b
-    add b
-    add b
-    add_a_to_hl
-    jp hl
+    ret
 
-_envelope_registers:
+.envelope_registers:
     dw rAUD1ENV
     dw rAUD2ENV
-    dw rAUD3LEVEL
+    dw rAUD4ENV
     dw rAUD4ENV
 
 fx_note_delay:
@@ -839,14 +1104,14 @@ fx_note_delay:
 
     ;; Generalize this somehow?
 
-    ld hl, _play_note_routines
+    ld hl, .play_note_routines
     ld a, b
     add b
     add b
     add_a_to_hl
     jp hl
 
-_play_note_routines:
+.play_note_routines:
     jp _playnote1
     jp _playnote2
     jp _playnote3
@@ -893,25 +1158,12 @@ fx_note_cut:
     ;; C: effect parameters
 
     ;; free registers: A, D, E, H, L
-    ; ld a, [tick]
+    ;; ld a, [tick]
     cp c
     ret nz
 
-    ;; TODO: Optimize!
-    ld hl, _envelope_registers
-    ld a, b
-    sla a
-    add_a_to_hl
-    ld a, [hl+]
-    ld d, [hl]
-    ld e, a
-    ld a, 0
-    ld [de], a
-    inc de
-    inc de
-    ld a, %11111111
-    ld [de], a
-    ret
+    ld d, 0
+    jr set_channel_volume
 
 fx_set_volume:
     ret nz ;; Return if we're not on tick zero.
@@ -926,19 +1178,17 @@ fx_set_volume:
 
 set_channel_volume:
     ;; Call with:
-    ;; Correct volume value in C
+    ;; Correct volume value in D
     ;; Channel number in B
 
     ld a, b
-    cp 3 ; check if it's channel 4
-    jr z, set_chn_4_vol
     cp 1 ; check if it's channel 2
-    ld a, c
     jr c, set_chn_1_vol
     jr z, set_chn_2_vol
 set_chn_3_vol:
     ;; "Quantize" the more finely grained volume control down to one of 4 values.
     ld a, c
+    swap a
     cp 0
     jr z, .zero
     cp 5
@@ -960,17 +1210,20 @@ set_chn_3_vol:
     ld [rAUD3LEVEL], a
     ret
 set_chn_2_vol:
-    swap a
+    ; ld a, d
+    ; and %00001111
+    ; or c
+    ld a, c
     ld [rAUD2ENV], a
+
     ret
 set_chn_1_vol:
-    swap a
-    ld [rAUD1ENV], a
-    ret
-set_chn_4_vol:
-    swap c
+    ; ld a, d
+    ; and %00001111
+    ; or c
     ld a, c
-    ld [rAUD4ENV], a
+    ld [rAUD1ENV], a
+
     ret
 
 fx_vibrato:
@@ -1567,15 +1820,12 @@ _update_current_order:
 _noreset:
     ld a, b
     ld [row], a
-
-    IF DEF(PREVIEW_MODE)
-    db $fd ; Signal to the emulator to update the interface
-    ENDC
     ret
 
 _halt:
     ; Do nothing, forever
     halt
+_nop:
     nop
     jr _halt
 
