@@ -1,7 +1,9 @@
 *.map
 *.gb
+*.gbs
 *.sym
 *.obj
 *.lnk
 obj/
 *.htt
+*.exe
