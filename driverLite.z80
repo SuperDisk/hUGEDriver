@@ -7,6 +7,12 @@ include "debug_macros.inc"
 
 include "constants.htt"
 
+dn: MACRO ;; (note, instr, effect)
+    db \1
+    db ((\2 << 4) | (\3 >> 8))
+    db LOW(\3)
+ENDM
+
 add_a_to_r16: MACRO
     add a, \2
     ld \2, a
@@ -48,6 +54,8 @@ STACK_SIZE EQU $7A
 PATTERN_LENGTH EQU 64
 
 ; $0000 - $003F: RST handlers.
+
+IF !DEF(GBS_MODE)
 
 SECTION "restarts", ROM0[$0000]
 ret
@@ -111,9 +119,9 @@ SECTION "P10-P13 signal low edge interrupt", ROM0[$0060]
 SECTION "Stack", HRAM[$FFFE - STACK_SIZE]
     ds STACK_SIZE
 
-
 ; Control starts here, but there's more ROM header several bytes later, so the
 ; only thing we can really do is immediately jump to after the header
+
 SECTION "init", ROM0[$0100]
     nop
     jp $0150
@@ -128,11 +136,25 @@ DS 1
 ; $0144 - $0145: "New" Licensee Code, a two character name.
 DB "NF"
 
-dn: MACRO ;; (note, instr, effect)
-    db \1
-    db ((\2 << 4) | (\3 >> 8))
-    db LOW(\3)
-ENDM
+ENDC
+
+;; TODO: Fix this so it fully conforms to the spec!!!!!!!!!!
+IF DEF(GBS_MODE)
+SECTION "GBS Header", ROM0[$0]
+db "GBS" ; magic
+db 1 ; version (always 1)
+db 1 ; num songs
+db 1 ; first song
+dw $70 ; load address
+dw _init ; init address
+dw _dosound ; play address
+dw $fffe ; stack pointer
+db 0
+db 0
+db GBS_TITLE
+db GBS_AUTHOR
+db GBS_COPYRIGHT
+ENDC
 
 SECTION "Song Data", ROM0
 
@@ -251,8 +273,12 @@ highmask4: db
 _end_vars:
 
 ; Initialization
+if !DEF(GBS_MODE)
 SECTION "main", ROM0[$0150]
 jp _init
+ELSE
+SECTION "main", ROM0
+ENDC
 
 _paint_tile:
     ld a, b
@@ -351,7 +377,11 @@ ENDC
     ld [rIE], a
     ei
 
+IF !DEF(GBS_MODE)
     jp _halt
+ELSE
+    ret
+ENDC
 
 _refresh_patterns:
 ;; Loads pattern registers with pointers to correct pattern based on
