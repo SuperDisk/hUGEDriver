@@ -7,3 +7,6 @@
 obj/
 *.htt
 *.exe
+rgbasm
+rgbfix
+rgblink
