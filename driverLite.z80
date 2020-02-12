@@ -1059,6 +1059,15 @@ fx_arpeggio:
     ld a, [tick]
     dec a
 
+    ;; A crappy modulo, because it's not a multiple of four :(
+
+    jr .test_greater_than_two
+.greater_than_two:
+    sub a, 3
+.test_greater_than_two:
+    cp 3
+    jr nc, .greater_than_two
+
     ;; Multiply by 2 to get offset into table
     add a
 
@@ -1068,13 +1077,10 @@ fx_arpeggio:
     add_a_to_hl
     jp hl
 
-    ;; TODO: Make this work when TICKS != 6
 .arp_options:
-    jr .set_arp1
-    jr .set_arp2
     jr .reset_arp
-    jr .set_arp1
     jr .set_arp2
+    jr .set_arp1
 .reset_arp:
     ld a, d
     jr .finish_skip_add
