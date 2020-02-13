@@ -217,6 +217,7 @@ row_break: db
 temp_note_value: dw
 row: db
 tick: db
+counter: db
 current_wave: db
 
 ;; Size of a channel in bytes
@@ -1025,16 +1026,13 @@ fx_vibrato:
     swap a
     ld d, a
 
-    ld a, [tick] ; Probably should change to some constantly ticking thing
+    ld a, [counter] ; Probably should change to some constantly ticking thing
+    ; srl a ; divide counter by two, because the fastest is just too fast!
     and d
     ld a, [hl-]
     jr z, .go_up
 .restore:
-    dec hl
-    dec hl
-    ld a, [hl-]
-    ld l, [hl]
-    ld h, a
+    call _convert_note
     jr .finish_vibrato
 .go_up:
     call _convert_note ; TODO: Find a way to grab it directly rather than recompute
@@ -1078,9 +1076,9 @@ fx_arpeggio:
     jp hl
 
 .arp_options:
-    jr .reset_arp
-    jr .set_arp2
     jr .set_arp1
+    jr .set_arp2
+    jr .reset_arp
 .reset_arp:
     ld a, d
     jr .finish_skip_add
@@ -1516,6 +1514,10 @@ _addr = _addr + 1
 .after_effect4:
 
 process_tick:
+    ld a, [counter]
+    inc a
+    ld [counter], a
+
     ld a, [ticks_per_row]
     ld b, a
 
