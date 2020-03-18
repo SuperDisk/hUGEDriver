@@ -186,7 +186,29 @@ include "instrument.htt"
 
 routines:
 
-; include "routine.htt"
+loadRoutine: MACRO
+__hUGE_Routine_\1:
+include "routine\1.htt"
+__end_hUGE_Routine_\1:
+ds 16 - (__end_hUGE_Routine_\1 - __hUGE_Routine_\1)
+ENDM
+
+  loadRoutine 0
+  loadRoutine 1
+  loadRoutine 2
+  loadRoutine 3
+  loadRoutine 4
+  loadRoutine 5
+  loadRoutine 6
+  loadRoutine 7
+  loadRoutine 8
+  loadRoutine 9
+  loadRoutine 10
+  loadRoutine 11
+  loadRoutine 12
+  loadRoutine 13
+  loadRoutine 14
+  loadRoutine 15
 
 ;;;;;;;;;
 ;; Waves
@@ -1026,7 +1048,14 @@ fx_vibrato:
     swap a
     ld d, a
 
+    ;; If it's the last tick, then reset the tone to its normal value so we
+    ;; don't screw the tone when the vibrato gets turned off!
+    ld a, [tick]
+    dec a
+    ld e, a
     ld a, [counter] ; Probably should change to some constantly ticking thing
+    cp e
+    jr z, .restore
     ; srl a ; divide counter by two, because the fastest is just too fast!
     and d
     ld a, [hl-]
