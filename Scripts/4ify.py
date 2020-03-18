@@ -1,4 +1,4 @@
-file = 'test_wave'
+file = 'DontGoRiff'
 
 orig = open(f'{file}.raw', 'rb').read()
 newf = open(f'{file}2.raw', 'wb')

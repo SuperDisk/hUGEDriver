@@ -1,11 +1,8 @@
 import wave
-import sys
 
-sys.argv.append('808nokickbreak.wav')
+TARGET_RATE = 8192
 
-TARGET_RATE = int(8192)
-
-with wave.open(sys.argv[1]) as w:
+with wave.open('DontGoBreak2.wav') as w:
     nchannels, sample_width, framerate, nframes, _, _ = w.getparams()
     outdata = bytearray()
     gbdata = bytearray()
@@ -37,12 +34,12 @@ with wave.open(sys.argv[1]) as w:
             nybble = crushed_frame + 7
         else:
             byte = (nybble << 4) | (crushed_frame + 7)
-            #gbdata.append(byte)
+            gbdata.append(byte)
             nybble = None
 
-    with wave.open(f'{sys.argv[1]}crush.wav', 'wb') as wout:
+    with wave.open('DontGoBreak2crush.wav', 'wb') as wout:
         wout.setparams(w.getparams())
         wout.writeframes(outdata)
 
-with open(f'{sys.argv[1]}crush.dat', 'wb') as f:
+with open('DontGoBreak2.dat', 'wb') as f:
     f.write(gbdata)
