@@ -174,11 +174,17 @@ include "pattern.htt"
 ;; Instruments
 ;;;;;;;;;;;;;;;;
 
-;; Instruments come in blocks.
+duty_instruments:
 
-instruments:
+include "duty_instrument.htt"
 
-include "instrument.htt"
+wave_instruments:
+
+include "wave_instrument.htt"
+
+noise_instruments:
+
+include "noise_instrument.htt"
 
 ;;;;;;;;;;;;;
 ;; Routines
@@ -986,7 +992,6 @@ set_channel_volume:
     cp 3 ; check if it's channel 4
     jr z, set_chn_4_vol
     cp 1 ; check if it's channel 2
-    ld a, c
     jr c, set_chn_1_vol
     jr z, set_chn_2_vol
 set_chn_3_vol:
@@ -1013,11 +1018,17 @@ set_chn_3_vol:
     ld [rAUD3LEVEL], a
     ret
 set_chn_2_vol:
-    swap a
+    ld a, [rAUD2ENV]
+    and %00001111
+    swap c
+    or c
     ld [rAUD2ENV], a
     ret
 set_chn_1_vol:
-    swap a
+    ld a, [rAUD1ENV]
+    and %00001111
+    swap c
+    or c
     ld [rAUD1ENV], a
     ret
 set_chn_4_vol:
@@ -1287,7 +1298,7 @@ _setup_instrument_pointer:
     sla a
     sla a
 
-    ld de, instruments
+    ; ld de, instruments -- caller must do this
     add_a_to_de
     rla ; reset the Z flag
     ret
@@ -1305,6 +1316,7 @@ _dosound:
     push af
     jr nc, .do_setvol1
 
+    ld de, duty_instruments
     call _setup_instrument_pointer
     ld a, [highmask1]
     res 7, a ; Turn off the "initial" flag
@@ -1346,6 +1358,7 @@ _dosound:
     push af
     jr nc, .do_setvol2
 
+    ld de, duty_instruments
     call _setup_instrument_pointer
     ld a, [highmask2]
     res 7, a ; Turn off the "initial" flag
@@ -1393,6 +1406,7 @@ _dosound:
 
     jr nc, .do_setvol3
 
+    ld de, wave_instruments
     call _setup_instrument_pointer
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
@@ -1452,6 +1466,7 @@ _addr = _addr + 1
 
     jr nc, .do_setvol4
 
+    ld de, noise_instruments
     call _setup_instrument_pointer
     ld a, [highmask4]
     res 7, a ; Turn off the "initial" flag
