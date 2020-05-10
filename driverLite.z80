@@ -55,6 +55,7 @@ PATTERN_LENGTH EQU 64
 
 ; $0000 - $003F: RST handlers.
 
+if DEF (STANDALONE_MODE)
 IF !DEF(GBS_MODE)
 
 SECTION "restarts", ROM0[$0000]
@@ -103,7 +104,7 @@ SECTION "Vblank interrupt", ROM0[$0040]
     reti
 
 SECTION "LCD controller status interrupt", ROM0[$0048]
-    call _dosound
+    call hUGE_dosound
     reti
 
 SECTION "Timer overflow interrupt", ROM0[$0050]
@@ -136,7 +137,7 @@ DS 1
 ; $0144 - $0145: "New" Licensee Code, a two character name.
 DB "NF"
 
-ENDC
+ENDC ; !GBS_MODE
 
 ;; TODO: Fix this so it fully conforms to the spec!!!!!!!!!!
 IF DEF(GBS_MODE)
@@ -146,15 +147,16 @@ db 1 ; version (always 1)
 db 1 ; num songs
 db 1 ; first song
 dw $70 ; load address
-dw _init ; init address
-dw _dosound ; play address
+dw hUGE_init ; init address
+dw hUGE_dosound ; play address
 dw $fffe ; stack pointer
 db 0
 db 0
 db GBS_TITLE
 db GBS_AUTHOR
 db GBS_COPYRIGHT
-ENDC
+ENDC ; GBS_MODE
+ENDC ; STANDALONE_MODE
 
 SECTION "Song Data", ROM0
 
@@ -226,6 +228,11 @@ include "wave.htt"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+SECTION "Note Table", ROM0
+note_table:
+include "music.inc"
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 SECTION "Playback variables", WRAM0
 _start_vars:
@@ -301,13 +308,29 @@ highmask4: db
 
 _end_vars:
 
-; Initialization
+if DEF(STANDALONE_MODE)
+
 if !DEF(GBS_MODE)
 SECTION "main", ROM0[$0150]
-jp _init
+jp hUGE_init
+ELSE
+SECTION "main", ROM0
+ENDC ; !GBS_MODE
+
 ELSE
 SECTION "main", ROM0
 ENDC
+
+_hUGE_init::
+    push bc
+    call hUGE_init
+    pop bc
+    ret
+_hUGE_dosound::
+    push bc
+    call hUGE_dosound
+    pop bc
+    ret
 
 _paint_tile:
     ld a, b
@@ -316,7 +339,8 @@ _paint_tile:
     ld [hl+], a
     ret
 
-_init:
+hUGE_init::
+  IF DEF(STANDALONE_MODE)
     ; Set LCD palette for grayscale mode; yes, it has a palette
     ld a, %11100100
     ld [$FF00+$47], a
@@ -339,28 +363,7 @@ _init:
     call _paint_tile
     ld bc, `00000001
     call _paint_tile
-
-    ;; Load some wave data (or code) into _AUD3WAVERAM
-    ld hl, waves ;; note_table
-_addr = _AUD3WAVERAM
-    REPT 16
-    ld a, [hl+]
-    ld [_addr], a
-_addr = _addr + 1
-    ENDR
-
-    ;; Enable chanel 3
-    ld a, %10000000
-    ld [rAUD3ENA], a
-    ld a, $ff ;; full length (although this does nothing)
-    ld [rAUD3LEN], a
-    ld a, %0000000 ; 0%
-    ld [rAUD3LEVEL], a
-
-    ld a, %11110000
-    ld [envelope1], a
-    ld a, %11110000
-    ld [envelope2], a
+  ENDC ; STANDALONE_MODE
 
     ;; Zero some ram
 IF !DEF(PREVIEW_MODE)
@@ -372,6 +375,10 @@ IF !DEF(PREVIEW_MODE)
     dec a
     jp nz, .fill_loop
 ENDC
+
+    ;; Force the load of the wave on the first note
+    ld a, 100
+    ld [current_wave], a
 
     ;; Load starting speed (7 ticks per row)
     ld a, TICKS
@@ -387,14 +394,19 @@ ENDC
     ld a, $77
     ld [rAUDVOL], a
 
+    ;; Enable chanel 3
+    ld a, %10000000
+    ld [rAUD3ENA], a
+    ld a, $ff ;; full length (although this does nothing)
+    ld [rAUD3LEN], a
+    ld a, %0000000 ; 0%
+    ld [rAUD3LEVEL], a
+
     ld a, [current_order]
     ld c, a ;; Current order index
     call _refresh_patterns
 
-    ;; Enable the timer
-    ; ld a, TACF_START | TACF_4KHZ
-    ; ld [rTAC], a
-
+	if DEF(STANDALONE_MODE)
     ;; Enable the HBlank interrupt on scanline 0
     ld a, [rSTAT]
     or a, STATF_LYC
@@ -405,8 +417,9 @@ ENDC
     ld a, IEF_LCDC ; IEF_VBLANK;  | IEF_LCDC ; IEF_HILO | IEF_TIMER
     ld [rIE], a
     ei
+	ENDC
 
-IF !DEF(GBS_MODE)
+IF !DEF(GBS_MODE) && DEF(STANDALONE_MODE)
     jp _halt
 ELSE
     ret
@@ -592,6 +605,14 @@ _playnote2:
     ret
 
 _playnote3:
+    ;; This fixes a gameboy hardware quirk, apparently.
+    ;; Problem appears in BGB.
+    ;; https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
+    xor a
+    ld [rAUD3ENA], a
+    ld a, %10000000
+    ld [rAUD3ENA], a
+
     ;; Play a note on channel 3 (waveform)
     ld a, [temp_note_value+1]
     ld [channel_period3], a
@@ -956,6 +977,7 @@ fx_note_cut:
     cp c
     ret nz
 
+.not_ch_3:
     ;; TODO: Optimize!
     ld hl, _envelope_registers
     ld a, b
@@ -966,6 +988,9 @@ fx_note_cut:
     ld e, a
     ld a, 0
     ld [de], a
+    ld a, b
+    cp 2
+    ret z ; return early if CH3-- no need to retrigger note
     inc de
     inc de
     ld a, %11111111
@@ -1303,7 +1328,7 @@ _setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
-_dosound:
+hUGE_dosound::
     ld a, [tick]
     or a
     jp nz, .process_effects
@@ -1429,7 +1454,7 @@ _dosound:
     swap a
     ld hl, waves
     add_a_to_hl
-    ld a, 0
+    xor a
     ld [rAUD3ENA], a
 
 _addr = _AUD3WAVERAM
@@ -1438,9 +1463,7 @@ _addr = _AUD3WAVERAM
     ldh [_addr], a
 _addr = _addr + 1
     ENDR
-
-    ld a, %10000000
-    ld [rAUD3ENA], a
+    ;; Aud3 will get re-enabled in playnote3
 
 .no_wave_copy:
     ld a, [de]
@@ -1646,9 +1669,3 @@ _halt:
     halt
     nop
     jr _halt
-
-SECTION "Wave stuff", ROM0
-
-SECTION "Note Table", ROM0
-note_table:
-include "music.inc"
