@@ -431,7 +431,7 @@ _refresh_patterns:
 
 ;; Call with c set to what order to load
 load_pattern: MACRO
-    ld hl, 0
+    ld h, 0
     ld l, c
     ld de, \1
     add hl, de
@@ -525,7 +525,7 @@ _update_channel:
     jr z, _update_channel4
     cp 2
     jr z, _update_channel3
-    cp 1
+    dec a ; cp 1
     jr z, _update_channel2
 
 _update_channel1:
@@ -561,7 +561,7 @@ _update_channel4:
     ld [rAUD4POLY], a
     ; ld a, [hl]
     ; and %01111111
-    ld a, 0
+    xor a
     ld [rAUD4GO], a
     ret
 
@@ -686,17 +686,15 @@ _doeffect:
     ld b, a
 
     ;; Multiply by 3 to get offset into table
-    ld a, b
-    add a, b
-    add a, b
+    add b
+    add b
 
     ld hl, .jump
     add_a_to_hl
 
     ld b, e
     ld a, [tick]
-    cp 0
-    ; or a ; We can return right off the bat if it's tick zero
+    or a ; We can return right off the bat if it's tick zero
     jp hl
 
 .jump:
@@ -801,7 +799,7 @@ fx_set_duty:
     ;; $9C0 = 75%
 
     ld a, b
-    or a ; cp 0
+    or a
     ld a, c
     jr z, .chan1
 .chan2:
@@ -854,7 +852,7 @@ fx_vol_slide:
     swap a
     sub d
     jr nc, .cont1
-    ld a, 0
+    xor a
 .cont1:
     add e
     cp $10
@@ -1016,7 +1014,7 @@ set_channel_volume:
     ld a, b
     cp 3 ; check if it's channel 4
     jr z, set_chn_4_vol
-    cp 1 ; check if it's channel 2
+    dec a ; cp 1 ; check if it's channel 2
     jr c, set_chn_1_vol
     jr z, set_chn_2_vol
 set_chn_3_vol:
@@ -1026,7 +1024,7 @@ set_chn_3_vol:
     jr nc, .one
     cp 5
     jr nc, .two
-    cp 0
+    or a ; cp 0
     jr z, .zero
 .three:
     ld a, %01100000
@@ -1038,7 +1036,7 @@ set_chn_3_vol:
     ld a, %00100000
     jr .done
 .zero:
-    ld a, 0
+    ; ld a, 0 ; a is already zero!
 .done:
     ld [rAUD3LEVEL], a
     ret
@@ -1092,7 +1090,6 @@ fx_vibrato:
     ld a, [counter] ; Probably should change to some constantly ticking thing
     cp e
     jr z, .restore
-    ; srl a ; divide counter by two, because the fastest is just too fast!
     and d
     ld a, [hl-]
     jr z, .go_up
@@ -1536,7 +1533,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a ; cp 0
     jr z, .after_effect1
 
     ld e, 0
@@ -1548,7 +1545,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a ; cp 0
     jr z, .after_effect2
 
     ld e, 1
@@ -1560,7 +1557,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a ; cp 0
     jr z, .after_effect3
 
     ld e, 2
@@ -1572,7 +1569,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a ; cp 0
     jr z, .after_effect4
 
     ld e, 3
@@ -1604,7 +1601,7 @@ _newrow:
 
     ;; Check if we need to perform a row break or pattern break
     ld a, [row_break]
-    cp 0
+    or a ; cp 0
     jr z, .no_break
 
     ;; These are offset by one so we can check to see if they've
@@ -1613,7 +1610,7 @@ _newrow:
     ld b, a
 
     ld a, [next_order]
-    cp 0
+    or a ; cp 0
 
     ;; Maybe use HL instead?
     push af
