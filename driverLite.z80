@@ -513,6 +513,40 @@ _convert_note:
     ccf
     ret
 
+_convert_ch4_note:
+    ;; Call with:
+    ;; Note number in A
+    ;; Stores polynomial counter in A
+    ;; Free: HL
+
+    cp 7
+    ret nc
+
+    ;; Thanks to RichardULZ for this formula
+    ;; https://docs.google.com/spreadsheets/d/1O9OTAHgLk1SUt972w88uVHp44w7HKEbS/edit#gid=75028951
+    ; if A > 7 then begin
+    ;   B := Floor((A-4)/4);
+    ;   C := (A mod 4)+4;
+    ;   A := (C or (B shl 4))
+    ; end;
+    ld h, a
+
+    ; B := Floor((A-4)/4);
+    sub 4
+    srl a
+    srl a
+    ld l, a
+
+    ; C := (A mod 4)+4;
+    ld a, h
+    and 3 ; modulo 4
+    add 4
+
+    ; A := (C or (B shl 4))
+    swap l
+    or l
+    ret
+
 _update_channel:
     ;; Call with:
     ;; Channel in B
