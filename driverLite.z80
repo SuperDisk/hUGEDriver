@@ -519,19 +519,25 @@ _convert_ch4_note:
     ;; Stores polynomial counter in A
     ;; Free: HL
 
-    cp 7
-    ret nc
+    ;; Invert the order of the numbers
+    add 192 ; (255 - 63)
+    cpl
 
     ;; Thanks to RichardULZ for this formula
     ;; https://docs.google.com/spreadsheets/d/1O9OTAHgLk1SUt972w88uVHp44w7HKEbS/edit#gid=75028951
     ; if A > 7 then begin
-    ;   B := Floor((A-4)/4);
+    ;   B := (A-4) div 4;
     ;   C := (A mod 4)+4;
     ;   A := (C or (B shl 4))
     ; end;
+
+    ; if A < 7 then return
+    cp 7
+    ret c
+
     ld h, a
 
-    ; B := Floor((A-4)/4);
+    ; B := (A-4) div 4;
     sub 4
     srl a
     srl a
@@ -539,7 +545,7 @@ _convert_ch4_note:
 
     ; C := (A mod 4)+4;
     ld a, h
-    and 3 ; modulo 4
+    and 3
     add 4
 
     ; A := (C or (B shl 4))
@@ -591,18 +597,14 @@ _update_channel3:
     ret
 _update_channel4:
     ld hl, highmask4
-    call _quantize_channel4_note
-    ld [rAUD4POLY], a
+    ;; TODO: Come back here
+    ; call _quantize_channel4_note
+    ; ld [rAUD4POLY], a
     ; ld a, [hl]
     ; and %01111111
     ld a, 0
     ld [rAUD4GO], a
     ret
-
-    ;;;;;;;
-    ;; Note playing routines. Need to either consolidate these or find some
-    ;; better way of doing effects that happen on the first tick.
-    ;;;;;;;
 
 _playnote1:
     ;; Call with:
@@ -640,7 +642,7 @@ _playnote2:
 
 _playnote3:
     ;; This fixes a gameboy hardware quirk, apparently.
-    ;; Problem appears in BGB.
+    ;; The problem is emulated accurately in BGB.
     ;; https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
     xor a
     ld [rAUD3ENA], a
@@ -664,46 +666,13 @@ _playnote3:
 
 _playnote4:
     ;; Play a "note" on channel 4 (noise)
-
-    ld a, [temp_note_value+1]
-    ld [channel_period4], a
-    ld e, a
-
     ld a, [temp_note_value]
-    ld [channel_period4+1], a
-    ld d, a
-
-    call _quantize_channel4_note
-    ld b, a
-
-    ld a, [rAUD4POLY]
-    or b
     ld [rAUD4POLY], a
 
     ;; Get the highmask and apply it.
-    ld hl, highmask4
-    or [hl]
+    ld a, [highmask4]
     ld [rAUD4GO], a
 
-    ret
-
-_quantize_channel4_note:
-    ;; Shift the "note value" right by 7 to get a spread from 0 to 15.
-    ;; Keep just the upmost bit of the lower byte
-    ld a, e
-    and %10000000
-    rla
-    ld c, a
-
-    ;; Keep the entire upper byte (but it's never the full 8 bits)
-    ld a, d
-    rla
-    or c
-
-    ld e, a
-    ld a, $F
-    sub e
-    swap a
     ret
 
 _doeffect:
@@ -1015,7 +984,7 @@ fx_note_cut:
     ;; TODO: Optimize!
     ld hl, _envelope_registers
     ld a, b
-    sla a
+    add a
     add_a_to_hl
     ld a, [hl+]
     ld d, [hl]
@@ -1354,8 +1323,8 @@ _setup_instrument_pointer:
     dec a ; Instrument 0 is "no instrument"
 
     ;; Shift left twice to multiply by 4
-    sla a
-    sla a
+    add a
+    add a
 
     ; ld de, instruments -- caller must do this
     add_a_to_de
@@ -1455,7 +1424,6 @@ hUGE_dosound::
     ld de, channel_note3
     call _lookup_note
 
-    ;; Any reason not to do this here?
     ld a, h
     ld [temp_note_value], a
     ld a, l
@@ -1510,7 +1478,6 @@ _addr = _addr + 1
     call _doeffect
 
     pop af
-
     jr nc, .after_note3
 
     call _playnote3
@@ -1518,11 +1485,18 @@ _addr = _addr + 1
 .after_note3:
     loadShort pattern4, b, c
     ld de, channel_note4
-    call _lookup_note
+    call _load_note_data
+    ld [channel_note4], a
+    cp 63
     push af
-
     jr nc, .do_setvol4
 
+    call _convert_ch4_note
+    ld [temp_note_value], a
+
+    ;; Instrument nibble is shifted left in order to have the final
+    ;; multiplication done by 8.
+    sla b
     ld de, noise_instruments
     call _setup_instrument_pointer
     ld a, [highmask4]
@@ -1530,30 +1504,22 @@ _addr = _addr + 1
     jr z, .write_mask4
 
     ld a, [de]
+    ld [rAUD4ENV], a
     inc de
+
+    ld a, [de]
+    and %00111111
     ld [rAUD4LEN], a
     ld a, [de]
-    inc de
-    ld [rAUD4ENV], a
-    ld a, [de]
-    ld [rAUD4POLY], a
-    inc de
-    ld a, [de]
-
+    and %11000000
 .write_mask4:
     ld [highmask4], a
 
 .do_setvol4:
-    ld a, h
-    ld [temp_note_value], a
-    ld a, l
-    ld [temp_note_value+1], a
-
     ld e, 3
     call _doeffect
 
     pop af
-
     jr nc, .after_note4
 
     call _playnote4
@@ -1659,7 +1625,7 @@ _newrow:
     jr z, _neworder
 
     dec a
-    sla a ;; Multiply the order by 2 (they are words)
+    add a ; multiply order by 2 (they are words)
 
     jr _update_current_order
 
