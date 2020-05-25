@@ -321,23 +321,14 @@ ELSE
 SECTION "main", ROM0
 ENDC
 
-_hUGE_init::
-    push bc
-    call hUGE_init
-    pop bc
-    ret
-_hUGE_dosound::
-    push bc
-    call hUGE_dosound
-    pop bc
-    ret
-
+IF DEF(STANDALONE_MODE)
 _paint_tile:
     ld a, b
     ld [hl+], a
     ld a, c
     ld [hl+], a
     ret
+ENDC
 
 hUGE_init::
   IF DEF(STANDALONE_MODE)
@@ -431,7 +422,7 @@ _refresh_patterns:
 
 ;; Call with c set to what order to load
 load_pattern: MACRO
-    ld hl, 0
+    ld h, 0
     ld l, c
     ld de, \1
     add hl, de
@@ -1494,11 +1485,8 @@ _addr = _addr + 1
     call _convert_ch4_note
     ld [temp_note_value], a
 
-    ;; Instrument nibble is shifted left in order to have the final
-    ;; multiplication done by 8.
-    sla b
     ld de, noise_instruments
-    call _setup_instrument_pointer
+    ; call _setup_instrument_pointer
     ld a, [highmask4]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
@@ -1508,6 +1496,7 @@ _addr = _addr + 1
     inc de
 
     ld a, [de]
+    ; db $dd
     and %00111111
     ld [rAUD4LEN], a
     ld a, [de]
@@ -1526,7 +1515,7 @@ _addr = _addr + 1
 
 .after_note4:
     ;; finally just update the tick/order/row values
-    jr process_tick
+    jp process_tick
 
 .process_effects:
     ;; Only do effects if not on tick zero
@@ -1570,7 +1559,27 @@ _addr = _addr + 1
     loadShort pattern4, b, c
     ld de, channel_note4
     call _load_note_data
+    cp 63
+    jp nc, .done_macro
+    ld h, a
 
+    ld de, noise_instruments
+    call _setup_instrument_pointer
+    ld a, [tick]
+    ld l, a
+    cp 7
+    jp nc, .done_macro
+
+    inc a
+    add_a_to_de
+    ld a, [de]
+    add h
+    call _convert_ch4_note
+    ld [rAUD4POLY], a
+    xor a
+    ld [rAUD4GO], a
+
+.done_macro:
     ld a, c
     cp 0
     jr z, .after_effect4
