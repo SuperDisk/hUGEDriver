@@ -21,7 +21,6 @@ add_a_to_r16: MACRO
     ld \1, a
 ENDM
 
-;; TODO: See if there's a way to shave off a byte.
 sub_from_r16: MACRO ;; (high, low, value)
     ld a, \2
     sub \3
@@ -248,7 +247,6 @@ current_order: db
 next_order: dw
 row_break: db
 
-;; TODO: Find some way to get rid of this thing.
 temp_note_value: dw
 row: db
 tick: db
@@ -560,7 +558,6 @@ _update_channel3:
     ld a, e
     ld [rAUD3LOW], a
     ld a, d
-
     ld [rAUD3HIGH], a
     ret
 _update_channel1:
@@ -568,7 +565,6 @@ _update_channel1:
     ld a, e
     ld [rAUD1LOW], a
     ld a, d
-
     ld [rAUD1HIGH], a
     ret
 _update_channel2:
@@ -576,7 +572,6 @@ _update_channel2:
     ld a, e
     ld [rAUD2LOW], a
     ld a, d
-
     ld [rAUD2HIGH], a
     ret
 _update_channel4:
@@ -586,7 +581,8 @@ _update_channel4:
     ; ld [rAUD4POLY], a
     ; ld a, [hl]
     ; and %01111111
-    ld a, 0
+    ; ld a, 0
+    xor a
     ld [rAUD4GO], a
     ret
 
@@ -898,7 +894,7 @@ fx_note_delay:
     ld a, [hl]
     ld [temp_note_value+1], a
 
-    ;; Generalize this somehow?
+    ;; TODO: Generalize this somehow?
 
     ld hl, _play_note_routines
     ld a, b
@@ -1063,13 +1059,13 @@ fx_vibrato:
 
     ;; If it's the last tick, then reset the tone to its normal value so we
     ;; don't screw the tone when the vibrato gets turned off!
-    ld a, [tick]
+    ld a, [ticks_per_row]
     dec a
     ld e, a
-    ld a, [counter] ; Probably should change to some constantly ticking thing
+    ld a, [counter]
     cp e
     jr z, .restore
-    ; srl a ; divide counter by two, because the fastest is just too fast!
+
     and d
     ld a, [hl-]
     jr z, .go_up
@@ -1077,7 +1073,7 @@ fx_vibrato:
     call _convert_note
     jr .finish_vibrato
 .go_up:
-    call _convert_note ; TODO: Find a way to grab it directly rather than recompute
+    call _convert_note
     ld a, c
     and %00001111
     add_a_to_hl
