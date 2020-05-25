@@ -549,23 +549,26 @@ _update_channel:
     ;; Channel in B
     ;; Note tone in DE
 
-    ;; TODO: Turn this into a jump table? Or find some other way to optimize
     ld a, b
-
     cp 3
     jr z, _update_channel4
-    cp 2
-    jr z, _update_channel3
-    cp 1
+    dec a
+    jr c, _update_channel1
     jr z, _update_channel2
+_update_channel3:
+    ld hl, highmask3
+    ld a, e
+    ld [rAUD3LOW], a
+    ld a, d
 
+    ld [rAUD3HIGH], a
+    ret
 _update_channel1:
     ld hl, highmask1
     ld a, e
     ld [rAUD1LOW], a
     ld a, d
-    ; or [hl]
-    ; and %01111111
+
     ld [rAUD1HIGH], a
     ret
 _update_channel2:
@@ -573,18 +576,8 @@ _update_channel2:
     ld a, e
     ld [rAUD2LOW], a
     ld a, d
-    ; or [hl]
-    ; and %01111111
+
     ld [rAUD2HIGH], a
-    ret
-_update_channel3:
-    ld hl, highmask3
-    ld a, e
-    ld [rAUD3LOW], a
-    ld a, d
-    ; or [hl]
-    ; and %01111111
-    ld [rAUD3HIGH], a
     ret
 _update_channel4:
     ld hl, highmask4
@@ -720,7 +713,7 @@ setup_channel_pointer:
 
     ld a, b
     REPT CHANNEL_SIZE_EXPONENT
-        sla a
+        add a
     ENDR
     add d
     ld hl, channels
@@ -757,12 +750,6 @@ fx_call_routine:
     ld hl, routines
     ld a, c
     swap a
-    ; and %11110000 is this necessary?
-    ; sla c
-    ; sla c
-    ; sla c
-    ; sla c
-    ; ld a, c
     add_a_to_hl
     jp hl
 
@@ -961,7 +948,6 @@ fx_pattern_break:
 
     ret
 
-;; TODO: Fix this
 fx_note_cut:
     ;; B: channel
     ;; C: effect parameters
@@ -971,24 +957,21 @@ fx_note_cut:
     cp c
     ret nz
 
-.not_ch_3:
-    ;; TODO: Optimize!
-    ld hl, _envelope_registers
+    ld hl, rAUD1ENV
     ld a, b
     add a
+    add a
+    add b ; multiply by 5
     add_a_to_hl
-    ld a, [hl+]
-    ld d, [hl]
-    ld e, a
-    ld a, 0
-    ld [de], a
+    ld [hl], 0
     ld a, b
     cp 2
     ret z ; return early if CH3-- no need to retrigger note
-    inc de
-    inc de
-    ld a, %11111111
-    ld [de], a
+
+    ;; Retrigger note
+    inc hl
+    inc hl
+    ld [hl], %11111111
     ret
 
 fx_set_volume:
@@ -1010,7 +993,7 @@ set_channel_volume:
     ld a, b
     cp 3 ; check if it's channel 4
     jr z, set_chn_4_vol
-    cp 1 ; check if it's channel 2
+    dec a ; check if it's channel 2
     jr c, set_chn_1_vol
     jr z, set_chn_2_vol
 set_chn_3_vol:
@@ -1032,7 +1015,7 @@ set_chn_3_vol:
     ld a, %00100000
     jr .done
 .zero:
-    ld a, 0
+    xor a
 .done:
     ld [rAUD3LEVEL], a
     ret
