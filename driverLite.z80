@@ -551,7 +551,7 @@ _update_channel:
     ld a, b
     cp 3
     jr z, _update_channel4
-    dec a
+    cp 1
     jr c, _update_channel1
     jr z, _update_channel2
 _update_channel3:
@@ -990,7 +990,7 @@ set_channel_volume:
     ld a, b
     cp 3 ; check if it's channel 4
     jr z, set_chn_4_vol
-    dec a ; check if it's channel 2
+    cp 1 ; check if it's channel 2
     jr c, set_chn_1_vol
     jr z, set_chn_2_vol
 set_chn_3_vol:
@@ -1455,31 +1455,33 @@ _addr = _addr + 1
 
 .after_note3:
     loadShort pattern4, b, c
-    ld de, channel_note4
     call _load_note_data
     ld [channel_note4], a
-    cp 63
+    cp LAST_NOTE
     push af
     jr nc, .do_setvol4
 
     call _convert_ch4_note
     ld [temp_note_value], a
 
-    ld de, noise_instruments
-    ; call _setup_instrument_pointer
+    ld de, 0 ; noise_instruments
+    call _setup_instrument_pointer
+
     ld a, [highmask4]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
 
-    ld a, [de]
-    ld [rAUD4ENV], a
-    inc de
+    ld hl, noise_instruments
+    sla e
+    add hl, de
 
-    ld a, [de]
-    ; db $dd
+    ld a, [hl+]
+    ld [rAUD4ENV], a
+
+    ld a, [hl]
     and %00111111
     ld [rAUD4LEN], a
-    ld a, [de]
+    ld a, [hl]
     and %11000000
 .write_mask4:
     ld [highmask4], a
@@ -1501,7 +1503,6 @@ _addr = _addr + 1
     ;; Only do effects if not on tick zero
 
     loadShort pattern1, b, c
-    ld de, channel_note1
     call _load_note_data
 
     ld a, c
@@ -1513,7 +1514,6 @@ _addr = _addr + 1
 
 .after_effect1:
     loadShort pattern2, b, c
-    ld de, channel_note2
     call _load_note_data
 
     ld a, c
@@ -1525,7 +1525,6 @@ _addr = _addr + 1
 
 .after_effect2:
     loadShort pattern3, b, c
-    ld de, channel_note3
     call _load_note_data
 
     ld a, c
@@ -1537,16 +1536,24 @@ _addr = _addr + 1
 
 .after_effect3:
     loadShort pattern4, b, c
-    ld de, channel_note4
     call _load_note_data
-    cp 63
+    cp LAST_NOTE
     jp nc, .done_macro
     ld h, a
 
-    ld de, noise_instruments
+    ld de, 0
     call _setup_instrument_pointer
+    sla e
+
+    ;; Manually add noise_instruments to de
+    ld a, low(noise_instruments)
+    add e
+    ld e, a
+    ld a, high(noise_instruments)
+    adc d
+    ld d, a
+
     ld a, [tick]
-    ld l, a
     cp 7
     jp nc, .done_macro
 
