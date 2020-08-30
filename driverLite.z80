@@ -1663,5 +1663,4 @@ _noreset:
 _halt:
     ; Do nothing, forever
     halt
-    nop
     jr _halt
