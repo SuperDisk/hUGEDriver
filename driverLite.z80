@@ -481,9 +481,7 @@ _lookup_note:
     ret nc
 
     ;; Store the loaded note value in channel_noteX
-    ld h, d
-    ld l, e
-    ld [hl], a
+    ld [de], a
 
 _convert_note:
     ;; Call with:
@@ -576,13 +574,10 @@ _update_channel2:
     ld [rAUD2HIGH], a
     ret
 _update_channel4:
-    ld hl, highmask4
-    ;; TODO: Come back here
-    ; call _quantize_channel4_note
-    ; ld [rAUD4POLY], a
-    ; ld a, [hl]
-    ; and %01111111
-    ; ld a, 0
+    ; ld hl, highmask4
+    ld a, e
+    call _convert_ch4_note
+    ld [rAUD4POLY], a
     xor a
     ld [rAUD4GO], a
     ret
@@ -648,6 +643,7 @@ _playnote3:
 _playnote4:
     ;; Play a "note" on channel 4 (noise)
     ld a, [temp_note_value]
+    ld [channel_period4+1], a
     ld [rAUD4POLY], a
 
     ;; Get the highmask and apply it.
@@ -1211,9 +1207,6 @@ fx_toneporta:
 
     ;; free registers: A, D, E, H, L
 
-    ;; TODO: Optimize. This usage of the stack isn't great but IMO it's
-    ;; better than using the stack hack which forces all effects to screw with
-    ;; pushing and popping. Most effects won't need to do this.
     ld d, 0
     call setup_channel_pointer
     push hl
