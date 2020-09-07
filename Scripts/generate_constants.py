@@ -145,6 +145,4 @@ letters = ["C_3",
 "B_8"]
 
 for x,note in zip(notes, letters):
-    lo = x & 0b00011111111
-    hi = (x & 0b11100000000) >> 8
-    print(f"db {lo}, {hi} \t\t ;; {note} = {lo | hi}")
+    print(f"dw {x}")
