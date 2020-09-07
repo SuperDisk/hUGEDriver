@@ -1,5 +1,5 @@
 # hUGEDriver
-The sound driver/playback routine for hUGETracker
+The sound driver/playback routine for [hUGETracker](https://github.com/SuperDisk/hUGETracker)
 
 This is the repository for hUGETracker's playback routine. Check driver-format.txt for information about the code.
 
