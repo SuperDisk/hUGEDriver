@@ -1,0 +1,172 @@
+include "include/hardware.inc"
+
+; Constants
+STACK_SIZE EQU $7A
+;; Stack starts at $FFFE
+
+; $0000 - $003F: RST handlers.
+
+SECTION "restarts", ROM0[$0000]
+ret
+REPT 7
+    nop
+ENDR
+; $0008
+ret
+REPT 7
+    nop
+ENDR
+; $0010
+ret
+REPT 7
+    nop
+ENDR
+; $0018
+ret
+REPT 7
+    nop
+ENDR
+; $0020
+ret
+REPT 7
+    nop
+ENDR
+; $0028
+ret
+REPT 7
+    nop
+ENDR
+; $0030
+ret
+REPT 7
+    nop
+ENDR
+; $0038
+ret
+REPT 7
+    nop
+ENDR
+
+; Interrupt addresses
+SECTION "Vblank interrupt", ROM0[$0040]
+    reti
+
+SECTION "LCD controller status interrupt", ROM0[$0048]
+    jp isr_wrapper
+
+SECTION "Timer overflow interrupt", ROM0[$0050]
+    reti
+
+SECTION "Serial transfer completion interrupt", ROM0[$0058]
+    reti
+
+SECTION "P10-P13 signal low edge interrupt", ROM0[$0060]
+    reti
+
+; Reserved stack space
+SECTION "Stack", HRAM[$FFFE - STACK_SIZE]
+    ds STACK_SIZE
+
+; Control starts here, but there's more ROM header several bytes later, so the
+; only thing we can really do is immediately jump to after the header
+
+SECTION "init", ROM0[$0100]
+    nop
+    jp $0150
+
+SECTION "nintendo_logo", ROM0[$0104]
+    NINTENDO_LOGO
+
+SECTION "romname", ROM0[$0134]
+; $0134 - $013E: The title, in upper-case letters, followed by zeroes.
+DB "HUGE"
+DS 7 ; padding
+; $013F - $0142: The manufacturer code. Empty for now
+DS 4
+DS 1
+; $0144 - $0145: "New" Licensee Code, a two character name.
+DB "NF"
+
+; Initialization
+SECTION "main", ROM0[$0150]
+    jp _init
+
+isr_wrapper:
+    push af
+    push hl
+    push bc
+    push de
+    call _hUGE_dosound
+    pop de
+    pop bc
+    pop hl
+    pop af
+    reti
+
+_paint_tile:
+    ld a, b
+    ld [hl+], a
+    ld a, c
+    ld [hl+], a
+    ret
+
+_init:
+    ld a, 0
+    ld [rIF], a
+    inc a
+    ld [rIE], a
+    halt
+    nop
+
+    ; Set LCD palette for grayscale mode; yes, it has a palette
+    ld a, %11100100
+    ld [$FF00+$47], a
+
+    ;; Fill with pattern
+    ld hl, $8000
+    ld bc, `10000000
+    call _paint_tile
+    ld bc, `01000000
+    call _paint_tile
+    ld bc, `00100000
+    call _paint_tile
+    ld bc, `00010000
+    call _paint_tile
+    ld bc, `00001000
+    call _paint_tile
+    ld bc, `00000100
+    call _paint_tile
+    ld bc, `00000010
+    call _paint_tile
+    ld bc, `00000001
+    call _paint_tile
+
+    ; Enable sound globally
+    ld a, $80
+    ld [rAUDENA], a
+    ; Enable all channels in stereo
+    ld a, $FF
+    ld [rAUDTERM], a
+    ; Set volume
+    ld a, $77
+    ld [rAUDVOL], a
+
+    ld hl, _song_descriptor
+    call hUGE_init
+
+    ;; Enable the HBlank interrupt on scanline 0
+    ld a, [rSTAT]
+    or a, STATF_LYC
+    ld [rSTAT], a
+    xor a ; ld a, 0
+    ld [rLYC], a
+
+    ld a, IEF_LCDC
+    ld [rIE], a
+    ei
+
+_halt:
+    ; Do nothing, forever
+    halt
+    nop
+    jr _halt
