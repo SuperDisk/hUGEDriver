@@ -11,9 +11,7 @@ File list:
 | HARDWARE.inc      | Constants that label some Gameboy hardware registers. Almost every Gameboy project uses this.                                                      |
 | music.inc         | A table that maps the note constants (byte size) to periods that can be fed into the hardware registers (short size)                               |
 | driver-format.txt | A text file explaining the layout of parts of the driver, and what formats are expected by certain routines.                                       |
-| driver.z80        | The actual code.                                                                                                                                   |
-| debug_macros.inc  | Originally intended to hold macros for debugging but I never really implemented the debugger into UGE so there's only one thing and it's not used. |
-| build.bat         | A script to build the driver on Windows.                                                                                                           |
+| driver.z80        | The actual code.                                                                                                                                   
 
 ## Scripts
 
@@ -23,10 +21,6 @@ File list:
 | eevee_resamp.py        | A resampler written by [Eevee](http://eev.ee) that actually converts wave files to a 4 bit format. |
 | generate_constants.py  | Was used to generate constants.inc                                                                          |
 | vibrato_percentages.py | Was used to mess around with what sort of vibrato waveforms could be created. Basically useless.            |
-
-## TestPatterns
-
-Just some testing data for debug purposes. Will be removed at some point.
 
 # License
 
