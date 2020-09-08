@@ -52,6 +52,11 @@ SECTION "Vblank interrupt", ROM0[$0040]
     reti
 
 SECTION "LCD controller status interrupt", ROM0[$0048]
+    ;; HACK!!!!!!!!!!!!!
+    ;; there's some sort of bug in the emulator which needs to be fixed,
+    ;; which screws up the program counter immediately after it exits a halt.
+    ;; this nop protects against that for now.
+    nop
     jp isr_wrapper
 
 SECTION "Timer overflow interrupt", ROM0[$0050]

@@ -1,5 +1,6 @@
 include "include/hardware.inc"
 include "include/constants.inc"
+include "constants.htt"
 
 add_a_to_r16: MACRO
     add \2
@@ -1642,9 +1643,9 @@ _noreset:
     ld a, b
     ld [row], a
 
-    ; IF DEF(PREVIEW_MODE)
+    IF DEF(PREVIEW_MODE)
     db $fd
-    ; ENDC
+    ENDC
     ret
 
 note_table:
