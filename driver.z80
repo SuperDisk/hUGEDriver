@@ -347,6 +347,7 @@ _convert_note:
     ld     h, [hl]
     ld     l, a
 
+    ;; todo?
     scf
     ret
 
@@ -1582,30 +1583,32 @@ process_tick:
 
 _newrow:
     ;; Reset tick to 0
-    xor a
+    xor a ; ld a, 0
     ld [tick], a
 
     ;; Check if we need to perform a row break or pattern break
     ld a, [row_break]
-    dec a
-    jr nc, .no_break
+    cp 0
+    jr z, .no_break
 
     ;; These are offset by one so we can check to see if they've
     ;; been modified
+    dec a
     ld b, a
 
     ld a, [next_order]
-    dec a
+    cp 0
 
     ;; Maybe use HL instead?
     push af
-    xor a
+    ld a, 0
     ld [next_order], a
     ld [row_break], a
     pop af
 
     jr z, _neworder
 
+    dec a
     add a ; multiply order by 2 (they are words)
 
     jr _update_current_order
@@ -1627,7 +1630,7 @@ _neworder:
     add a, 2
     cp c
     jr nz, _update_current_order
-    xor a
+    ld a, 0
 _update_current_order:
     ;; Call with:
     ;; A: The order to load
