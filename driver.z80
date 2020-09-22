@@ -1465,6 +1465,7 @@ _addr = _addr + 1
     ld [rAUD4LEN], a
     ld a, [hl]
     and %11000000
+    or %10000000
 .write_mask4:
     ld [highmask4], a
 
