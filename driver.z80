@@ -1,6 +1,5 @@
 include "include/hardware.inc"
 include "include/constants.inc"
-include "constants.htt"
 
 add_a_to_r16: MACRO
     add \2
@@ -206,6 +205,7 @@ hUGE_mute_channel::
 
 hUGE_init::
     push hl
+    if !DEF(PREVIEW_MODE)
     ;; Zero some ram
     ld c, _end_vars - _start_vars
     ld hl, _start_vars
@@ -214,6 +214,7 @@ hUGE_init::
     ld [hl+], a
     dec c
     jp nz, .fill_loop
+    ENDC
 
     ld a, %11110000
     ld [envelope1], a
