@@ -55,16 +55,6 @@ load_hl_ind: MACRO
     ld l, a
 ENDM
 
-add_a_ind_ret_de: MACRO
-    ld e, a
-    ld a, [\1]
-    add e
-    ld e, a
-    ld a, [\1+1]
-    adc 0
-    ld d, a
-ENDM
-
 load_de_ind: MACRO
     ld a, [\1]
     ld e, a
@@ -347,7 +337,6 @@ _convert_note:
     ld     h, [hl]
     ld     l, a
 
-    ;; todo?
     scf
     ret
 
@@ -1244,6 +1233,20 @@ loadShort: MACRO
     ld \2, a
 ENDM
 
+;; TODO: Find some way to de-duplicate this code!
+_setup_instrument_pointer_ch4:
+    ;; Call with:
+    ;; Instrument/High nibble of effect in B
+    ;; Stores whether the instrument was real in the Z flag
+    ;; Stores the instrument pointer in DE
+    ld a, b
+    and %11110000
+    swap a
+    ret z ; If there's no instrument, then return early.
+
+    dec a ; Instrument 0 is "no instrument"
+    add a
+    jp _setup_instrument_pointer.finish
 _setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1255,7 +1258,7 @@ _setup_instrument_pointer:
     ret z ; If there's no instrument, then return early.
 
     dec a ; Instrument 0 is "no instrument"
-
+.finish:
     ;; Shift left twice to multiply by 4
     add a
     add a
@@ -1413,8 +1416,6 @@ _addr = _AUD3WAVERAM
     ldh [_addr], a
 _addr = _addr + 1
     ENDR
-    ;; Aud3 will get re-enabled in playnote3
-    ;; TODO: Toxa's still has this here...
 
 .no_wave_copy:
     ld a, [de]
@@ -1449,7 +1450,6 @@ _addr = _addr + 1
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
 
-    ;;TODO: where to put this?
     checkMute 3, .do_setvol4
 
     load_hl_ind noise_instruments
@@ -1529,17 +1529,9 @@ _addr = _addr + 1
     jp nc, .done_macro
     ld h, a
 
-    ld de, 0
-    call _setup_instrument_pointer
-    sla e
-
-    ;; Manually add noise_instruments to de
-    ld a, low(noise_instruments)
-    add e
-    ld e, a
-    ld a, high(noise_instruments)
-    adc d
-    ld d, a
+    load_de_ind noise_instruments
+    call _setup_instrument_pointer_ch4
+    jr z, .done_macro ; No instrument, thus no macro
 
     ld a, [tick]
     cp 7
