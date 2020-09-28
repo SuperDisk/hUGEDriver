@@ -1464,8 +1464,8 @@ _addr = _addr + 1
     and %00111111
     ld [rAUD4LEN], a
     ld a, [hl]
-    and %11000000
-    or %10000000
+    and %01000000
+    or  %10000000
 .write_mask4:
     ld [highmask4], a
 
@@ -1539,13 +1539,19 @@ _addr = _addr + 1
     cp 7
     jp nc, .done_macro
 
+    push de
+
     inc a
     add_a_to_de
     ld a, [de]
     add h
     call _convert_ch4_note
     ld [rAUD4POLY], a
-    xor a
+
+    pop de
+    inc de
+    ld a, [de]
+    and %01000000
     ld [rAUD4GO], a
 
 .done_macro:

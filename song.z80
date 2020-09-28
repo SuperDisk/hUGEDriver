@@ -12,7 +12,7 @@ SECTION "Song Data", ROMX
 
 ;; song descriptor
 
-_song_descriptor::
+SONG_DESCRIPTOR::
 db TICKS  ; tempo
 dw order_cnt
 dw order1, order2, order3, order4
