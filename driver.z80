@@ -1451,7 +1451,7 @@ _addr = _addr + 1
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
 
-    checkMute 3, .do_setvol4
+    checkMute 3, .do_setvol4 ; TODO: move this?
 
     load_hl_ind noise_instruments
     sla e
@@ -1463,6 +1463,15 @@ _addr = _addr + 1
     ld a, [hl]
     and %00111111
     ld [rAUD4LEN], a
+
+    ld a, [temp_note_value]
+    ld d, a
+    ld a, [hl]
+    and %10000000
+    swap a
+    or d
+    ld [temp_note_value], a
+
     ld a, [hl]
     and %01000000
     or  %10000000
@@ -1539,17 +1548,23 @@ _addr = _addr + 1
     cp 7
     jp nc, .done_macro
 
+    inc de
+    push de
     push de
 
-    inc a
     add_a_to_de
     ld a, [de]
     add h
     call _convert_ch4_note
+    ld d, a
+    pop hl
+    ld a, [hl]
+    and %10000000
+    swap a
+    or d
     ld [rAUD4POLY], a
 
     pop de
-    inc de
     ld a, [de]
     and %01000000
     ld [rAUD4GO], a
