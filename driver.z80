@@ -1305,7 +1305,7 @@ _hUGE_dosound::
     ld [rAUD1ENV], a
     inc de
     ld a, [de]
-    ;; TODO: check toxa's change here
+    ld [rAUD1HIGH], a
 
 .write_mask1:
     ld [highmask1], a
@@ -1349,7 +1349,7 @@ _hUGE_dosound::
     ld [rAUD2ENV], a
     inc de
     ld a, [de]
-    ;; TODO: Check toxa's change here
+    ld [rAUD2HIGH], a
 
 .write_mask2:
     ld [highmask2], a
@@ -1420,6 +1420,7 @@ _addr = _addr + 1
 
 .no_wave_copy:
     ld a, [de]
+    ld [rAUD3HIGH], a
 
 .write_mask3:
     ld [highmask3], a
