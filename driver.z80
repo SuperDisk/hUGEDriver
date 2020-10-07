@@ -999,19 +999,30 @@ fx_vibrato:
 
     ;; If it's the last tick, then reset the tone to its normal value so we
     ;; don't screw the tone when the vibrato gets turned off!
+    ;; if tick == ticks_per_row:
+    ;;    restore
+    ;; if (counter && effect_param) == 0:
+    ;;     go_up
+    ;; else
+    ;;     restore
+           
     ld a, [ticks_per_row]
     dec a
     ld e, a
     ld a, [tick]
     inc a
     cp e
-    ld a, [hl-]
     jr nc, .go_up
 
 .restore:
+    ld a, [hl-]
     call _convert_note
     jr .finish_vibrato
 .go_up:
+    ld a, [counter]
+    and c
+    jr nz, .restore    
+    ld a, [hl-]
     call _convert_note
     ld a, c
     and %00001111
