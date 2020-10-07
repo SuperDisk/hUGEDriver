@@ -1,7 +1,7 @@
 #ifndef HUGEDRIVER_H_INCLUDE
 #define HUGEDRIVER_H_INCLUDE
 
-#define DN(A, B, C) (A),((B << 4) | (C >> 8)),(C & 0xFF)
+#define DN(A, B, C) (unsigned char)(A),(unsigned char)((B << 4) | (C >> 8)),(unsigned char)(C & 0xFF)
 
 #define C_3 0
 #define Cs3 1
