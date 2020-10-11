@@ -1000,7 +1000,7 @@ fx_vibrato:
     ld a, [counter]
     and e
     ld a, [hl]
-    jr z, .go_up
+    jr nz, .go_up
 .restore:
     call _convert_note
     jr .finish_vibrato
