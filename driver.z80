@@ -1088,14 +1088,13 @@ fx_porta_up:
     ld a, c
     add_a_to_de
 
+.finish:
     ld a, d
     ld [hl-], a
     ld [hl], e
 
     jp _update_channel
 
-;; TODO: Maybe merge with fx_porta_up, since they're so similar? Would need
-;; to find a way to compare against effect code.
 fx_porta_down:
     ret z
     ;; A: tick
@@ -1115,11 +1114,7 @@ fx_porta_down:
     ld a, c
     sub_from_r16 d, e, c
 
-    ld a, d
-    ld [hl-], a
-    ld [hl], e
-
-    jp _update_channel
+    jr fx_porta_up.finish
 
 fx_toneporta:
     jr nz, .do_toneporta
@@ -1443,7 +1438,7 @@ _addr = _addr + 1
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
 
-    checkMute 3, .do_setvol4 ; TODO: move this?
+    checkMute 3, .do_setvol4
 
     load_hl_ind noise_instruments
     sla e
