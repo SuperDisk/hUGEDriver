@@ -661,7 +661,7 @@ fx_set_duty:
     ;; $9C0 = 75%
 
     ld a, b
-    or a ; cp 0
+    or a
     jr z, .chan1
 .chan2:
     retMute 1
@@ -931,7 +931,7 @@ set_chn_3_vol:
     jr nc, .one
     cp 5
     jr nc, .two
-    cp 0
+    or a
     jr z, .zero
 .three:
     ld a, %01100000
@@ -1296,7 +1296,6 @@ _hUGE_dosound::
     ld [rAUD1ENV], a
     inc de
     ld a, [de]
-    ld [rAUD1HIGH], a
 
 .write_mask1:
     ld [highmask1], a
@@ -1340,7 +1339,6 @@ _hUGE_dosound::
     ld [rAUD2ENV], a
     inc de
     ld a, [de]
-    ld [rAUD2HIGH], a
 
 .write_mask2:
     ld [highmask2], a
@@ -1414,7 +1412,6 @@ _addr = _addr + 1
 
 .no_wave_copy:
     ld a, [de]
-    ld [rAUD3HIGH], a
 
 .write_mask3:
     ld [highmask3], a
@@ -1494,7 +1491,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a
     jr z, .after_effect1
 
     ld e, 0
@@ -1507,7 +1504,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a
     jr z, .after_effect2
 
     ld e, 1
@@ -1520,7 +1517,7 @@ _addr = _addr + 1
     call _load_note_data
 
     ld a, c
-    cp 0
+    or a
     jr z, .after_effect3
 
     ld e, 2
@@ -1566,7 +1563,7 @@ _addr = _addr + 1
 
 .done_macro:
     ld a, c
-    cp 0
+    or a
     jr z, .after_effect4
 
     ld e, 3
@@ -1598,7 +1595,7 @@ _newrow:
 
     ;; Check if we need to perform a row break or pattern break
     ld a, [row_break]
-    cp 0
+    or a
     jr z, .no_break
 
     ;; These are offset by one so we can check to see if they've
@@ -1607,7 +1604,7 @@ _newrow:
     ld b, a
 
     ld a, [next_order]
-    cp 0
+    or a
 
     ;; Maybe use HL instead?
     push af
