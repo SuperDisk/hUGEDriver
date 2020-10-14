@@ -106,8 +106,6 @@ tick: db
 counter: db
 current_wave: db
 
-;; Size of a channel in bytes
-CHANNEL_SIZE EQU 8
 ;; Amount to be shifted in order to skip a channel.
 CHANNEL_SIZE_EXPONENT EQU 3
 
@@ -402,7 +400,6 @@ ENDM
 _update_channel1:
     retMute 0
 
-    ld hl, highmask1
     ld a, e
     ld [rAUD1LOW], a
     ld a, d
@@ -411,7 +408,6 @@ _update_channel1:
 _update_channel2:
     retMute 1
 
-    ld hl, highmask2
     ld a, e
     ld [rAUD2LOW], a
     ld a, d
@@ -420,7 +416,6 @@ _update_channel2:
 _update_channel3:
     retMute 2
 
-    ld hl, highmask3
     ld a, e
     ld [rAUD3LOW], a
     ld a, d
@@ -429,7 +424,6 @@ _update_channel3:
 _update_channel4:
     retMute 3
 
-    ; ld hl, highmask4
     ld a, e
     call _convert_ch4_note
     ld [rAUD4POLY], a
