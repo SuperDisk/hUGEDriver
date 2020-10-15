@@ -251,31 +251,41 @@ hUGE_init::
 
     ret
 
-_refresh_patterns:
-;; Loads pattern registers with pointers to correct pattern based on
-;; an order index
-
-;; Call with c set to what order to load
-load_pattern: MACRO
-    ld hl, \1
+load_pattern:
     ld a, [hl+]
     ld h, [hl]
     ld l, a
-    ld a, b
-    ld b, 0
-    add hl, bc
-    ld b, a
+    ld a, c
+    add_a_to_hl
 
     ld a, [hl+]
-    ld [\2], a
-    ld a, [hl+]
-    ld [\2+1], a
-ENDM
-    load_pattern order1, pattern1
-    load_pattern order2, pattern2
-    load_pattern order3, pattern3
-    load_pattern order4, pattern4
+    ld [de], a
+    inc de
+    ld a, [hl]
+    ld [de], a
+
     ret
+
+_refresh_patterns:
+    ;; Loads pattern registers with pointers to correct pattern based on
+    ;; an order index
+
+    ;; Call with c set to what order to load
+    ld hl, order1
+    ld de, pattern1
+    call load_pattern
+
+    ld hl, order2
+    ld de, pattern2
+    call load_pattern
+
+    ld hl, order3
+    ld de, pattern3
+    call load_pattern
+
+    ld hl, order4
+    ld de, pattern4
+    jr load_pattern
 
 _load_note_data:
     ;; Call with:
