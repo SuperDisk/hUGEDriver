@@ -35,7 +35,6 @@ ret_dont_call_playnote: MACRO
     jp hl
 ENDM
 
-
 add_a_ind_ret_hl: MACRO
     ld hl, \1
     add [hl]
@@ -88,7 +87,10 @@ routines: dw
 waves: dw
 
 ;; variables
-mute_channels: db
+aud1high_ptr: db
+aud2high_ptr: db
+aud3high_ptr: db
+aud4go_ptr:   db
 
 pattern1: dw
 pattern2: dw
@@ -244,6 +246,15 @@ hUGE_init::
 
     copy_pointer_from_hl routines
     copy_pointer_from_hl waves
+
+    ld a, low(rAUD1HIGH)
+    ld [aud1high_ptr], a
+    ld a, low(rAUD2HIGH)
+    ld [aud2high_ptr], a
+    ld a, low(rAUD3HIGH)
+    ld [aud3high_ptr], a
+    ld a, low(rAUD4GO)
+    ld [aud4go_ptr], a
 
     ld a, [current_order]
     ld c, a ;; Current order index
@@ -401,48 +412,47 @@ _update_channel:
     dec b
     jr z, _update_channel4
 
-retMute: MACRO
-    ld a, [mute_channels]
-    bit \1, a
-    ret nz
-ENDM
-
 _update_channel1:
-    retMute 0
+    ld a, [aud1high_ptr]
+    ld c, a
 
     ld a, e
     ldh [rAUD1LOW], a
     ld a, d
-    ldh [rAUD1HIGH], a
+    ldh [c], a
     ret
 _update_channel2:
-    retMute 1
+    ld a, [aud2high_ptr]
+    ld c, a
 
     ld a, e
     ldh [rAUD2LOW], a
     ld a, d
-    ldh [rAUD2HIGH], a
+    ldh [c], a
     ret
 _update_channel3:
-    retMute 2
+    ld a, [aud3high_ptr]
+    ld c, a
 
     ld a, e
     ldh [rAUD3LOW], a
     ld a, d
-    ldh [rAUD3HIGH], a
+    ldh [c], a
     ret
 _update_channel4:
-    retMute 3
+    ld a, [aud4go_ptr]
+    ld c, a
 
     ld a, e
     call _convert_ch4_note
     ldh [rAUD4POLY], a
     xor a
-    ldh [rAUD4GO], a
+    ldh [c], a
     ret
 
 _playnote1:
-    retMute 0
+    ld a, [aud1high_ptr]
+    ld c, a
 
     ;; Play a note on channel 1 (square wave)
     ld a, [temp_note_value+1]
@@ -455,12 +465,13 @@ _playnote1:
     ;; Get the highmask and apply it.
     ld hl, highmask1
     or [hl]
-    ldh [rAUD1HIGH], a
+    ldh [c], a
 
     ret
 
 _playnote2:
-    retMute 1
+    ld a, [aud2high_ptr]
+    ld c, a
 
     ;; Play a note on channel 2 (square wave)
     ld a, [temp_note_value+1]
@@ -473,12 +484,13 @@ _playnote2:
     ;; Get the highmask and apply it.
     ld hl, highmask2
     or [hl]
-    ldh [rAUD2HIGH], a
+    ldh [c], a
 
     ret
 
 _playnote3:
-    retMute 2
+    ld a, [aud3high_ptr]
+    ld c, a
 
     ;; This fixes a gameboy hardware quirk, apparently.
     ;; The problem is emulated accurately in BGB.
@@ -499,12 +511,13 @@ _playnote3:
     ;; Get the highmask and apply it.
     ld hl, highmask3
     or [hl]
-    ldh [rAUD3HIGH], a
+    ldh [c], a
 
     ret
 
 _playnote4:
-    retMute 3
+    ld a, [aud4go_ptr]
+    ld c, a
 
     ;; Play a "note" on channel 4 (noise)
     ld a, [temp_note_value]
@@ -513,7 +526,7 @@ _playnote4:
 
     ;; Get the highmask and apply it.
     ld a, [highmask4]
-    ldh [rAUD4GO], a
+    ldh [c], a
 
     ret
 
@@ -532,8 +545,8 @@ _doeffect:
 
     ;; Multiply by 3 to get offset into table
     ld a, b
-    add a, b
-    add a, b
+    add b
+    add b
 
     ld hl, .jump
     add_a_to_hl
@@ -668,12 +681,10 @@ fx_set_duty:
     or a
     jr z, .chan1
 .chan2:
-    retMute 1
     ld a, c
     ldh [rAUD2LEN], a
     ret
 .chan1:
-    retMute 0
     ld a, c
     ldh [rAUD1LEN], a
     ret
@@ -693,21 +704,6 @@ fx_vol_slide:
     ;; C: effect parameters
 
     ;; free registers: A, D, E, H, L
-
-    ;; Todo
-    ;; check channel mute
-    ld d, 1
-    ld a, b
-    or a
-    jr z, .cont
-.loop:
-    sla d
-    dec a
-    jr nz, .loop
-.cont:
-    ld a, [mute_channels]
-    and d
-    ret nz
 
     ld d, 0
     call setup_channel_pointer
@@ -870,20 +866,6 @@ fx_note_cut:
     cp c
     ret nz
 
-    ;; check channel mute
-    ld d, 1
-    ld a, b
-    or a
-    jr z, .cont
-.loop:
-    sla d
-    dec a
-    jr nz, .loop
-.cont:
-    ld a, [mute_channels]
-    and d
-    ret nz
-
 note_cut:
     ld hl, rAUD1ENV
     ld a, b
@@ -927,8 +909,6 @@ set_channel_volume:
     jr c, set_chn_1_vol
     jr z, set_chn_2_vol
 set_chn_3_vol:
-    retMute 2
-
     ;; "Quantize" the more finely grained volume control down to one of 4 values.
     ld a, c
     cp 10
@@ -952,8 +932,6 @@ set_chn_3_vol:
     ldh [rAUD3LEVEL], a
     ret
 set_chn_2_vol:
-    retMute 1
-
     ldh a, [rAUD2ENV]
     and %00001111
     swap c
@@ -961,8 +939,6 @@ set_chn_2_vol:
     ldh [rAUD2ENV], a
     ret
 set_chn_1_vol:
-    retMute 0
-
     ldh a, [rAUD1ENV]
     and %00001111
     swap c
@@ -970,8 +946,6 @@ set_chn_1_vol:
     ldh [rAUD1ENV], a
     ret
 set_chn_4_vol:
-    retMute 3
-
     swap c
     ld a, c
     ldh [rAUD4ENV], a
@@ -1244,12 +1218,6 @@ _setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
-checkMute: MACRO
-    ld a, [mute_channels]
-    bit \1, a
-    jp nz, \2
-ENDM
-
 _hUGE_dosound::
     ld a, [tick]
     or a
@@ -1267,8 +1235,6 @@ _hUGE_dosound::
     ld a, [highmask1]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask1
-
-    checkMute 0, .do_setvol1
 
     ld a, [de]
     inc de
@@ -1312,8 +1278,6 @@ _hUGE_dosound::
     ld a, [highmask2]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask2
-
-    checkMute 1, .do_setvol2
 
     inc de
     ld a, [de]
@@ -1361,8 +1325,6 @@ _hUGE_dosound::
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask3
-
-    checkMute 2, .do_setvol3
 
     ld a, [de]
     inc de
@@ -1427,8 +1389,6 @@ _addr = _addr + 1
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
 
-    checkMute 3, .do_setvol4
-
     ld a, [de]
     inc de
     ldh [rAUD4ENV], a
@@ -1465,8 +1425,6 @@ _addr = _addr + 1
 
 .process_effects:
     ;; Only do effects if not on tick zero
-    checkMute 0, .after_effect1
-
     loadShort pattern1, b, c
     call _load_note_data
 
@@ -1478,8 +1436,6 @@ _addr = _addr + 1
     call _doeffect
 
 .after_effect1:
-    checkMute 1, .after_effect2
-
     loadShort pattern2, b, c
     call _load_note_data
 
@@ -1491,8 +1447,6 @@ _addr = _addr + 1
     call _doeffect
 
 .after_effect2:
-    checkMute 2, .after_effect3
-
     loadShort pattern3, b, c
     call _load_note_data
 
@@ -1504,8 +1458,6 @@ _addr = _addr + 1
     call _doeffect
 
 .after_effect3:
-    checkMute 3, .after_effect4
-
     loadShort pattern4, b, c
     call _load_note_data
     cp LAST_NOTE
