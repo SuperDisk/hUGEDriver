@@ -381,6 +381,7 @@ _convert_ch4_note:
 
 _update_channel:
     ;; Call with:
+    ;; Highmask in C
     ;; Channel in B
     ;; Note tone in DE
 
@@ -403,6 +404,7 @@ _update_channel1:
     ld a, e
     ld [rAUD1LOW], a
     ld a, d
+    or c
     ld [rAUD1HIGH], a
     ret
 _update_channel2:
@@ -411,6 +413,7 @@ _update_channel2:
     ld a, e
     ld [rAUD2LOW], a
     ld a, d
+    or c
     ld [rAUD2HIGH], a
     ret
 _update_channel3:
@@ -419,6 +422,7 @@ _update_channel3:
     ld a, e
     ld [rAUD3LOW], a
     ld a, d
+    or c
     ld [rAUD3HIGH], a
     ret
 _update_channel4:
@@ -427,6 +431,7 @@ _update_channel4:
     ld a, e
     call _convert_ch4_note
     ld [rAUD4POLY], a
+    ; ld a, c
     xor a
     ld [rAUD4GO], a
     ret
@@ -1006,6 +1011,7 @@ fx_vibrato:
 .finish_vibrato:
     ld d, h
     ld e, l
+    ld c, 0
     jp _update_channel
 
 fx_arpeggio:
@@ -1061,6 +1067,7 @@ fx_arpeggio:
     call _convert_note
     ld d, h
     ld e, l
+    ld c, 0
     jp _update_channel
 
 fx_porta_up:
@@ -1087,6 +1094,7 @@ fx_porta_up:
     ld [hl-], a
     ld [hl], e
 
+    ld c, 0
     jp _update_channel
 
 fx_porta_down:
@@ -1201,9 +1209,16 @@ fx_toneporta:
     ld e, l
 .done:
     pop hl
-    ld a, e
-    ld [hl+], a
+    ld [hl], e
+    inc hl
     ld [hl], d
+
+    ld a, 6
+    add_a_to_hl
+    ld a, [hl]
+    ld c, a
+    res 7, a
+    ld [hl], a
 
     jp _update_channel
 
