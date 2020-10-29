@@ -1,5 +1,5 @@
-# hUGEDriver
-The sound driver/playback routine for [hUGETracker](https://github.com/SuperDisk/hUGETracker)
+![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
+---
 
 # Quick start (RGBDS)
 1. Export your song in "RGBDS .htt" format in hUGETracker.
