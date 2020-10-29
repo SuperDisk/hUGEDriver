@@ -8,6 +8,9 @@
 4. Load `hl` with your song descriptor name, and `call hUGE_init`
 5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
 6. When assembling your game, be sure to specify your music file and hUGEDriver.z80 in your call to rgbasm/rgblink!
+
+See the `rgbds_example` directory for a working example!
+
 # Quick start (GBDK)
 
 1. Export your song in "GBDK .c" format in hUGETracker.
