@@ -7,7 +7,7 @@
 3. Place the exported `.asm` file in your RGBDS project.
 4. Load `hl` with your song descriptor name, and `call hUGE_init`
 5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
-6. When assembling your game, be sure to specify your music file and hUGEDriver.z80 in your call to `rgbasm`/`rgblink`!
+6. When assembling your game, be sure to specify your music file and hUGEDriver.asm in your call to `rgbasm`/`rgblink`!
 
 See the `rgbds_example` directory for a working example!
 
@@ -50,20 +50,20 @@ __critical {
 }
 ```
 
-Check out `player.z80` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
+Check out `player.asm` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
 
 # Files in this repo
 
-| File                  | Explanation                                                                                                         |
-|-----------------------|---------------------------------------------------------------------------------------------------------------------|
-| hUGEDriver.z80        | The driver itself.                                                                                                  |
-| song.z80              | A template used to create a song descriptor for use by the driver.                                                  |
-| player.z80            | Some example code that illustrates how to initialize and use the driver. Also used by hUGETracker to preview music. |
-| gbs.z80               | Used by hUGETracker to build GBS soundtrack files.                                                                  |
+| File                      | Explanation                                                                                                         |
+|---------------------------|---------------------------------------------------------------------------------------------------------------------|
+| hUGEDriver.asm            | The driver itself.                                                                                                  |
+| song.asm                  | A template used to create a song descriptor for use by the driver.                                                  |
+| player.asm                | Some example code that illustrates how to initialize and use the driver. Also used by hUGETracker to preview music. |
+| gbs.asm                   | Used by hUGETracker to build GBS soundtrack files.                                                                  |
 | gbdk_example/hUGEDriver.h | A C header that allows for usage of hUGEDriver in GBDK projects.                                                    |
-| include/constants.inc | Some note constant values. These values are mapped to actual frequency/periods in music.inc                         |
-| include/music.inc     | A table that maps the note constants (byte size) to periods that can be fed into the hardware registers (word size) |
-| doc/driver-format.txt | A text file explaining the layout of parts of the driver, and what formats are expected by certain routines.        |
+| include/constants.inc     | Some note constant values. These values are mapped to actual frequency/periods in music.inc                         |
+| include/music.inc         | A table that maps the note constants (byte size) to periods that can be fed into the hardware registers (word size) |
+| doc/driver-format.txt     | A text file explaining the layout of parts of the driver, and what formats are expected by certain routines.        |
 
 # License
 
