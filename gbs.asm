@@ -36,5 +36,5 @@ gbs_init:
     ld a, $77
     ld [rAUDVOL], a
 
-    ld hl, _song_descriptor
+    ld hl, SONG_DESCRIPTOR
     jp hUGE_init
