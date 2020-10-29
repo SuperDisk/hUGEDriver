@@ -1,15 +1,15 @@
 A hUGEDriver pattern is a series of 64 rows in this format:
 
   Note     Instr    Effect
-NNNNNNNN, IIIIEEEE, ppppPPPP
+NNNNNNNN, IIIIEEEE, XXXXYYYY
 
 where
 
 N = Note code
 I = Instrument code
 C = Effect code
-p = Effect param 1
-P = Effect param 2
+X = Effect param 1
+Y = Effect param 2
 
 If the note code is greater than 71 then it's considered to be an empty note cell.
 
