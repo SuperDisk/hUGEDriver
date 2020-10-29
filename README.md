@@ -53,6 +53,8 @@ __critical {
 
 Check out `player.asm` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
 
+Feel free to contact me on Discord (superdisk#5726) or via email (on my profile) if you want help integrating with your game, or just wanna talk!
+
 # Files in this repo
 
 | File                      | Explanation                                                                                                         |
