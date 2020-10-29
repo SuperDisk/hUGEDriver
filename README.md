@@ -27,7 +27,7 @@ Note: hUGEDriver is assembled by RGBDS into a `.obj` file, and then is converted
 
 # Usage
 
-This driver is suitable for use in homebrew games. hUGETracker exports data representing the various compoennts of a song, as well as a *song descriptor* which is a small block of pointers that tell the driver how to initialize and play a song.
+This driver is suitable for use in homebrew games. hUGETracker exports data representing the various components of a song, as well as a *song descriptor* which is a small block of pointers that tell the driver how to initialize and play a song.
 
 hUGETracker can export the data and song descriptor as a `.asm` or `.c` for use in RGBDS or GBDK based projects, respectively. Playing a song is as simple as calling hUGE_init with a pointer to your song descriptor, and then calling `hUGE_dosound` at a regular interval (usually on VBlank, the timer interrupt, or simply in your game's main loop)
 
