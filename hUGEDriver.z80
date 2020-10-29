@@ -381,9 +381,10 @@ _convert_ch4_note:
 
 _update_channel:
     ;; Call with:
-    ;; Highmask in C
+    ;; Highmask in A
     ;; Channel in B
     ;; Note tone in DE
+    ld c, a
 
     dec b
     jr z, _update_channel2
@@ -1011,7 +1012,7 @@ fx_vibrato:
 .finish_vibrato:
     ld d, h
     ld e, l
-    ld c, 0
+    xor a
     jp _update_channel
 
 fx_arpeggio:
@@ -1067,7 +1068,7 @@ fx_arpeggio:
     call _convert_note
     ld d, h
     ld e, l
-    ld c, 0
+    xor a
     jp _update_channel
 
 fx_porta_up:
@@ -1094,7 +1095,7 @@ fx_porta_up:
     ld [hl-], a
     ld [hl], e
 
-    ld c, 0
+    xor a
     jp _update_channel
 
 fx_porta_down:
@@ -1217,9 +1218,8 @@ fx_toneporta:
     add_a_to_hl
     ld a, [hl]
     ld c, a
-    res 7, a
-    ld [hl], a
-
+    res 7, c
+    ld [hl], c
     jp _update_channel
 
 loadShort: MACRO
