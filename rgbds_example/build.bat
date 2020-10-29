@@ -1,6 +1,6 @@
 rgbasm -ohUGEDriver.obj -i.. ../hUGEDriver.z80
-rgbasm -osong.obj -i.. -isample_song sample_song/song.z80
-rgbasm -oplayer.obj -i.. ../player.obj
+rgbasm -osample_song.obj -i.. sample_song.asm
+rgbasm -oplayer.obj -i.. -DSONG_DESCRIPTOR=ryukenden ../player.z80
 
-rgblink -ooutput.gb player.obj hUGEDriver.obj song.obj
+rgblink -ooutput.gb player.obj hUGEDriver.obj sample_song.obj
 rgbfix -p0 -v output.gb

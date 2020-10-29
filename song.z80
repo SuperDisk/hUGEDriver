@@ -1,12 +1,4 @@
-include "include/hUGE_note_table.inc"
-
-include "constants.htt"
-
-dn: MACRO ;; (note, instr, effect)
-    db \1
-    db ((\2 << 4) | (\3 >> 8))
-    db LOW(\3)
-ENDM
+include "include/hUGE.inc"
 
 SECTION "Song Data", ROMX
 

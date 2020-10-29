@@ -1,5 +1,4 @@
 include "include/hardware.inc"
-include "constants.htt"
 
 SECTION "GBS Header", ROM0[$0]
 db "GBS" ; magic

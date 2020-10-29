@@ -1,5 +1,5 @@
 include "include/hardware.inc"
-include "include/hUGE_constants.inc"
+include "include/hUGE.inc"
 
 add_a_to_r16: MACRO
     add \2

@@ -3,6 +3,7 @@
 *.gbs
 *.sym
 *.obj
+*.o
 *.lnk
 obj/
 *.htt
@@ -10,3 +11,5 @@ obj/
 rgbasm
 rgbfix
 rgblink
+
+!rgb2sdas.exe

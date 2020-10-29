@@ -1,5 +1,8 @@
-;; hUGETracker constants
-;; Written by SuperDisk 2019
+dn: MACRO ;; (note, instr, effect)
+    db \1
+    db ((\2 << 4) | (\3 >> 8))
+    db LOW(\3)
+ENDM
 
 C_3 EQU 0
 C#3 EQU 1
