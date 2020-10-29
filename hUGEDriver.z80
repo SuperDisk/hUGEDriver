@@ -1,5 +1,5 @@
 include "include/hardware.inc"
-include "include/constants.inc"
+include "include/hUGE_constants.inc"
 
 add_a_to_r16: MACRO
     add \2
@@ -1660,4 +1660,4 @@ _noreset:
     ret
 
 note_table:
-include "include/music.inc"
+include "include/hUGE_note_table.inc"
