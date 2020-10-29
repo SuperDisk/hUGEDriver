@@ -22,7 +22,7 @@ See the `rgbds_example` directory for a working example!
 7. In your game's main loop or in a VBlank interrupt, call `hUGE_dosound`
 8. When compiling your game, be sure to specify your music file and hUGEDriver.o in your call to LCC!
 
-See `gbdk/gbdk_player_example.c` for a working example!
+See `gbdk_example/gbdk_player_example.c` for a working example!
 
 # Usage
 
@@ -50,7 +50,7 @@ __critical {
 }
 ```
 
-Check out `player.z80` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk/gbdk_player_example.c` for usage with GBDK C likewise.
+Check out `player.z80` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
 
 # Files in this repo
 
@@ -60,7 +60,7 @@ Check out `player.z80` for a full fledged example of how to use the driver in an
 | song.z80              | A template used to create a song descriptor for use by the driver.                                                  |
 | player.z80            | Some example code that illustrates how to initialize and use the driver. Also used by hUGETracker to preview music. |
 | gbs.z80               | Used by hUGETracker to build GBS soundtrack files.                                                                  |
-| gbdk/hUGEDriver.h     | A C header that allows for usage of hUGEDriver in GBDK projects.                                                    |
+| gbdk_example/hUGEDriver.h | A C header that allows for usage of hUGEDriver in GBDK projects.                                                    |
 | include/constants.inc | Some note constant values. These values are mapped to actual frequency/periods in music.inc                         |
 | include/music.inc     | A table that maps the note constants (byte size) to periods that can be fed into the hardware registers (word size) |
 | doc/driver-format.txt | A text file explaining the layout of parts of the driver, and what formats are expected by certain routines.        |
