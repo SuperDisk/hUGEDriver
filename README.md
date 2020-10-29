@@ -12,7 +12,6 @@
 See the `rgbds_example` directory for a working example!
 
 # Quick start (GBDK)
-
 1. Export your song in "GBDK .c" format in hUGETracker.
 2. Choose a *song descriptor* name. This is what you will refer to the song as in your code. It must be a valid C variable name.
 3. Place the exported .C file in your GBDK project.
@@ -20,9 +19,11 @@ See the `rgbds_example` directory for a working example!
 5. Define `extern const hUGESong_t your_song_descriptor_here` in your game's main file
 6. Call `hUGE_init(&your_song_descriptor_here)` in your game's main file
 7. In your game's main loop or in a VBlank interrupt, call `hUGE_dosound`
-8. When compiling your game, be sure to specify your music file and hUGEDriver.o in your call to `lcc`!
+8. When compiling your game, be sure to specify your music file and `hUGEDriver.o` in your call to `lcc`!
 
 See `gbdk_example/gbdk_player_example.c` for a working example!
+
+Note: hUGEDriver is assembled by RGBDS into a `.obj` file, and then is converted to GBDK's format using `rgb2sdas` (in the `gbdk_example` folder). Be sure to assemble and link this object with your game (check `gbdk_example/build.bat` for the steps).
 
 # Usage
 
