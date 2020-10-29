@@ -1,7 +1,7 @@
 ![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
 ---
 
-This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker](https://nickfa.ro/index.php/HUGETracker)
+This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker.](https://nickfa.ro/index.php/HUGETracker)
 
 # Quick start (RGBDS)
 1. Export your song in "RGBDS .asm" format in hUGETracker.
