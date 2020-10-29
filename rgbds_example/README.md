@@ -13,7 +13,6 @@ rgbasm -osample_song.obj -i.. sample_song.asm
 
 :: Assemble the example player code into an object
 :: We specify -DSONG_DESCRIPTOR=ryukenden because that's the song descriptor I chose when exporting the song in hUGETracker.
-
 rgbasm -oplayer.obj -i.. -DSONG_DESCRIPTOR=ryukenden ../player.z80
 
 :: Link the objects together and run rgbfix
