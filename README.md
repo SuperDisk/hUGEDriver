@@ -7,7 +7,7 @@
 3. Place the exported folder of `.htt` files in your RGBDS project.
 4. Load `hl` with your song descriptor name, and `call hUGE_init`
 5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
-6. When assembling your game, be sure to specify your music file and hUGEDriver.z80 in your call to rgbasm/rgblink!
+6. When assembling your game, be sure to specify your music file and hUGEDriver.z80 in your call to `rgbasm`/`rgblink`!
 
 See the `rgbds_example` directory for a working example!
 
@@ -20,7 +20,7 @@ See the `rgbds_example` directory for a working example!
 5. Define `extern const hUGESong_t your_song_descriptor_here` in your game's main file
 6. Call `hUGE_init(&your_song_descriptor_here)` in your game's main file
 7. In your game's main loop or in a VBlank interrupt, call `hUGE_dosound`
-8. When compiling your game, be sure to specify your music file and hUGEDriver.o in your call to LCC!
+8. When compiling your game, be sure to specify your music file and hUGEDriver.o in your call to `lcc`!
 
 See `gbdk_example/gbdk_player_example.c` for a working example!
 
