@@ -14,15 +14,13 @@ This is the repository for hUGEDriver, the music driver for the Game Boy which p
 Be sure to enable sound playback before you start!
 
 ```asm
-; Enable sound globally
 ld a, $80
 ld [rAUDENA], a
-; Enable all channels in stereo
 ld a, $FF
 ld [rAUDTERM], a
-; Set volume
 ld a, $77
-ld [rAUDVOL], a```
+ld [rAUDVOL], a
+```
 
 See the `rgbds_example` directory for a working example!
 
@@ -41,7 +39,8 @@ Be sure to enable sound playback before you start!
 ```c
 NR52_REG = 0x80;
 NR51_REG = 0xFF;
-NR50_REG = 0x77;```
+NR50_REG = 0x77;
+```
 
 See `gbdk_example/gbdk_player_example.c` for a working example!
 
