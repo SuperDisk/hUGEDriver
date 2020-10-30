@@ -11,6 +11,19 @@ This is the repository for hUGEDriver, the music driver for the Game Boy which p
 5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
 6. When assembling your game, be sure to specify your music file and hUGEDriver.asm in your call to `rgbasm`/`rgblink`!
 
+Be sure to enable sound playback before you start!
+
+```asm
+; Enable sound globally
+ld a, $80
+ld [rAUDENA], a
+; Enable all channels in stereo
+ld a, $FF
+ld [rAUDTERM], a
+; Set volume
+ld a, $77
+ld [rAUDVOL], a```
+
 See the `rgbds_example` directory for a working example!
 
 # Quick start (GBDK)
@@ -22,6 +35,13 @@ See the `rgbds_example` directory for a working example!
 6. Call `hUGE_init(&your_song_descriptor_here)` in your game's main file
 7. In your game's main loop or in a VBlank interrupt, call `hUGE_dosound`
 8. When compiling your game, be sure to specify your music file and `hUGEDriver.o` in your call to `lcc`!
+
+Be sure to enable sound playback before you start!
+
+```c
+NR52_REG = 0x80;
+NR51_REG = 0xFF;
+NR50_REG = 0x77;```
 
 See `gbdk_example/gbdk_player_example.c` for a working example!
 
