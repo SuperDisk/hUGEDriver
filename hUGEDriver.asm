@@ -61,17 +61,14 @@ load_de_ind: MACRO
     ld d, a
 ENDM
 
-copy_pointer_from_hl: MACRO
-    ld a, [hl+]
-    ld [\1], a
-    ld a, [hl+]
-    ld [\1+1], a
-ENDM
-
 PATTERN_LENGTH EQU 64
 
 SECTION "Playback variables", WRAM0
 _start_vars:
+
+;; hooks
+
+pattern_load_hook: dw
 
 ;; active song descriptor
 order_cnt: db
@@ -159,13 +156,13 @@ _end_vars:
 
 SECTION "Sound Driver", ROM0
 
-_hUGE_init::
+_hUGE_load_song::
     push bc
     ld hl, sp+4
     ld a, [hl+]
     ld h, [hl]
     ld l, a
-    call hUGE_init
+    call hUGE_load_song
     pop bc
     ret
 
@@ -202,8 +199,15 @@ hUGE_mute_channel::
     ret
 
 hUGE_init::
-    push hl
+    ld a, high(_refresh_patterns)
+    ld [pattern_load_hook], a
+    ld a, low(_refresh_patterns)
+    ld [pattern_load_hook+1], a
+    ret
+
+hUGE_load_song::
     if !DEF(PREVIEW_MODE)
+    push hl
     ;; Zero some ram
     ld c, _end_vars - _start_vars
     ld hl, _start_vars
@@ -212,6 +216,7 @@ hUGE_init::
     ld [hl+], a
     dec c
     jp nz, .fill_loop
+    pop hl
     ENDC
 
     ld a, %11110000
@@ -222,7 +227,6 @@ hUGE_init::
     ld a, 100
     ld [current_wave], a
 
-    pop hl
     ld a, [hl+] ; tempo
     ld [ticks_per_row], a
 
@@ -233,48 +237,59 @@ hUGE_init::
     ld a, [de]
     ld [order_cnt], a
 
-    copy_pointer_from_hl order1
-    copy_pointer_from_hl order2
-    copy_pointer_from_hl order3
-    copy_pointer_from_hl order4
+    ld c, waves+2 - order1
+    ld de, order1
 
-    copy_pointer_from_hl duty_instruments
-    copy_pointer_from_hl wave_instruments
-    copy_pointer_from_hl noise_instruments
-
-    copy_pointer_from_hl routines
-    copy_pointer_from_hl waves
+.copy_song_descriptor_loop:
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec c
+    jr nz, .copy_song_descriptor_loop
 
     ld a, [current_order]
-    ld c, a ;; Current order index
-    call _refresh_patterns
+    ld c, a ; Current order index
 
-    ret
+    ld hl, pattern_load_hook
+    ld a, [hl+]
+    ld l, [hl]
+    ld h, a
+    jp hl
 
 _refresh_patterns:
-;; Loads pattern registers with pointers to correct pattern based on
-;; an order index
+    ;; Loads pattern registers with pointers to correct pattern based on
+    ;; an order index
 
-;; Call with c set to what order to load
-load_pattern: MACRO
-    ld hl, \1
+    ;; Call with c set to what order to load
+    push bc
+
+    ld hl, order_cnt
+    ld b, [hl]
+    inc hl
     ld a, [hl+]
     ld h, [hl]
     ld l, a
-    ld a, b
-    ld b, 0
-    add hl, bc
-    ld b, a
+    ld a, c
+    add_a_to_hl
 
+    ld de, pattern1
+    ld c, 4
+
+.loop:
     ld a, [hl+]
-    ld [\2], a
-    ld a, [hl+]
-    ld [\2+1], a
-ENDM
-    load_pattern order1, pattern1
-    load_pattern order2, pattern2
-    load_pattern order3, pattern3
-    load_pattern order4, pattern4
+    ld [de], a
+    inc de
+
+    ld a, [hl-]
+    ld [de], a
+    inc de
+
+    ld a, b
+    add_a_to_hl
+    dec c
+    jr nz, .loop
+
+    pop bc
     ret
 
 _load_note_data:
@@ -1648,7 +1663,15 @@ _update_current_order:
     ;; B: The row for the order to start on
     ld [current_order], a
     ld c, a
-    call _refresh_patterns
+
+    ld hl, _noreset
+    push hl
+    ld hl, pattern_load_hook
+    ld a, [hl+]
+    ld l, [hl]
+    ld h, a
+    jp hl
+    ; call _refresh_patterns
 
 _noreset:
     ld a, b

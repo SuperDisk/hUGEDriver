@@ -116,7 +116,7 @@ _paint_tile:
     ret
 
 _init:
-    ld a, 0
+    xor a
     ld [rIF], a
     inc a
     ld [rIE], a
@@ -156,8 +156,10 @@ _init:
     ld a, $77
     ld [rAUDVOL], a
 
-    ld hl, SONG_DESCRIPTOR
     call hUGE_init
+
+    ld hl, SONG_DESCRIPTOR
+    call hUGE_load_song
 
     ;; Enable the HBlank interrupt on scanline 0
     ld a, [rSTAT]
