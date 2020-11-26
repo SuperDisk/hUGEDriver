@@ -16,6 +16,8 @@ type
     SymType: Byte;
 
     No: Integer;
+    BankAlias: boolean;
+    BankValue: Integer;
 
     FileName: String;
     LineNum, SectionID, Value: LongInt;
@@ -371,17 +373,28 @@ begin
 end;
 
 function FindPatch(const Section: TRSection; Index: Integer; out Patch: TRPatch): Boolean;
-var
-  I: Integer;
+var I: Integer;
 begin
   for I := Low(Section.Patches) to High(Section.Patches) do
     if Section.Patches[I].Offset = Index then begin
       Patch := Section.Patches[I];
       Exit(True);
     end;
-
   Result := False;
 end;
+
+function FindSection (const Obj: TRObj; SecionID: Integer; out Section: TRSection): Boolean;
+var I: Integer;
+begin
+  with Obj do
+    for I := Low(Sections) to High(Sections) do with Sections[I] do
+      if ID = SecionID then begin
+        Section := Sections[I];
+        Exit(True);
+      end;
+  Result := False;
+end;
+
 
 var
   RObj: TRObj;
@@ -399,31 +412,31 @@ var
   WritePos: Word;
   Idx: Integer;
   CODESEG: string;
-  DefaultBank: Integer = 1;
+  DefaultBank: Integer = 0;
   sourcename, tmp: string;
-  
+
   old_sym, new_sym: string;
-  
+
   verbose: boolean = false;
-  
+
   export_all: boolean = false;
 
 begin
-  if (ParamCount() < 1) then begin 
+  if (ParamCount() < 1) then begin
     Writeln('Usage: rgb2sdas [-c<code_section>] [-v] [-e] [-r<symbol1>=<symbol2>] [-b<default_bank>] <object_name>');
     Halt;
   end;
-  
+
   sourcename:= ParamStr(ParamCount());
   if not FileExists(sourcename) then Die('File not found: %s', [sourcename]);
-  
+
   old_sym:= ''; new_sym:= '';
-  
+
   CODESEG:= '_CODE';
   for I:= 1 to ParamCount() - 1 do begin
     tmp:= ParamStr(i);
-    if (CompareText(tmp, '-v') = 0) then 
-      verbose:= true 
+    if (CompareText(tmp, '-v') = 0) then
+      verbose:= true
     else if (CompareText(copy(tmp, 1, 2), '-e') = 0) then
       export_all:= true
     else if (CompareText(copy(tmp, 1, 2), '-c') = 0) then begin
@@ -440,23 +453,34 @@ begin
         old_sym:= copy(tmp, 1, idx - 1);
         new_sym:= copy(tmp, idx + 1, length(tmp));
       end;
-    end;    
+    end;
   end;
-  
+
   RObj := ReadObjFile(sourcename);
   if verbose then PrintObjFile(RObj);
 
   Assign(F, sourcename + '.o');
   Rewrite(F);
-  try 
+  try
     Idx:= 0;
     // pass 1: all imports first
     for I:= Low(RObj.Symbols) to High(RObj.Symbols) do with RObj.Symbols[I] do begin
-      if ((SymType and $7f) = SYM_IMPORT) then begin
-        No:= Idx;
-        Inc(Idx);
-      end else No:= -1;
-    end;  
+      case (SymType and $7f) of
+        SYM_IMPORT : begin
+                       No:= Idx;
+                       Inc(Idx);
+                     end;
+        SYM_EXPORT : begin
+                       No:= -1;
+                       if FindSection(RObj, SectionID, Section) and (Section.SectType = ROMX) then begin
+                         BankAlias:= (max(DefaultBank, Section.Bank) > 0);
+                         BankValue:= max(DefaultBank, Section.Bank);
+                         if BankAlias then Inc(Idx);
+                       end;
+                     end;
+        else         No:= -1;
+      end;
+    end;
     // pass 2: all other (export local only when forced)
     for I:= Low(RObj.Symbols) to High(RObj.Symbols) do with RObj.Symbols[I] do begin
       case (SymType and $7f) of
@@ -473,20 +497,22 @@ begin
                      end;
         else         Die('Unsupported symbol type: %d', [SymType and $7f]);
       end;
-    end;  
+    end;
 
     // output object header
-    Writeln(F, 'XL2');
+    Writeln(F, 'XL3');
     Writeln(F, Format('H %x areas %x global symbols', [RObj.NumberOfSections, idx]));
     Writeln(F, Format('M %s', [StringReplace(ExtractFileName(sourcename), '.', '_', [rfReplaceAll])]));
     Writeln(F, 'O -mgbz80');
 
     // output all imported symbols
-    for I:= Low(RObj.Symbols) to High(RObj.Symbols) do 
-      with RObj.Symbols[I] do 
-        if (SymType = SYM_IMPORT) then 
-          Writeln(F, Format('S %s Ref%.4x', [StringReplace(Name, '.', '____', [rfReplaceAll]), 0]));
-    
+    for I:= Low(RObj.Symbols) to High(RObj.Symbols) do
+      with RObj.Symbols[I] do
+        if (SymType = SYM_IMPORT) then
+          Writeln(F, Format('S %s Ref%.6x', [StringReplace(Name, '.', '____', [rfReplaceAll]), 0]))
+        else if ((SymType = SYM_EXPORT) and BankAlias) then
+          Writeln(F, Format('S b%s Def%.6x', [StringReplace(Name, '.', '____', [rfReplaceAll]), BankValue]));
+
     // output all sections and other symbols
     for Section in RObj.Sections do begin
       if Section.Org = -1 then
@@ -495,14 +521,13 @@ begin
           ROMX: if (DefaultBank = 0) then Writeln(F, Format('A %s size %x flags 0 addr 0', [CODESEG, Section.Size]))
                                      else Writeln(F, Format('A _CODE_%d size %x flags 0 addr 0', [max(DefaultBank, Section.Bank), Section.Size]));
           else  Writeln(F, Format('A _DATA size %x flags 0 addr 0', [Section.Size]));
-        end  
+        end
       else Die('absolute sections currently unsupported: %s', [Section.Name]);
 
       for Symbol in RObj.Symbols do
-        if Symbol.SectionID = Section.ID then begin
-          if (Symbol.SymType <> SYM_IMPORT) and (Symbol.No >= 0) then 
-            Writeln(F, Format('S %s Def%.4x', [StringReplace(Symbol.Name, '.', '____', [rfReplaceAll]), Symbol.Value]));
-        end;
+        if Symbol.SectionID = Section.ID then
+          if (Symbol.SymType <> SYM_IMPORT) and (Symbol.No >= 0) then
+            Writeln(F, Format('S %s Def%.6x', [StringReplace(Symbol.Name, '.', '____', [rfReplaceAll]), Symbol.Value]));
     end;
 
     // convert object itself
@@ -528,11 +553,11 @@ begin
 
                               if (Symbol.SymType = SYM_IMPORT) then begin
                                   if (Symbol.No < 0) then Die('Trying to reference eliminated symbol');
-                                  Writeln(F, Format('T %.2x %.2x %.2x %.2x', [lo(WritePos), hi(WritePos), lo(ValueToWrite), hi(ValueToWrite)]));
-                                  Writeln(F, Format('R 00 00 %.2x %.2x 02 02 %.2x %.2x', [lo(Sct), hi(Sct), lo(Symbol.No), hi(Symbol.No)]));
+                                  Writeln(F, Format('T %.2x %.2x 00 %.2x %.2x', [lo(WritePos), hi(WritePos), lo(ValueToWrite), hi(ValueToWrite)]));
+                                  Writeln(F, Format('R 00 00 %.2x %.2x 02 03 %.2x %.2x', [lo(Sct), hi(Sct), lo(Symbol.No), hi(Symbol.No)]));
                               end else begin
-                                  Writeln(F, Format('T %.2x %.2x %.2x %.2x', [lo(WritePos), hi(WritePos), lo(ValueToWrite), hi(ValueToWrite)]));
-                                  Writeln(F, Format('R 00 00 %.2x %.2x 00 02 %.2x %.2x', [lo(Sct), hi(Sct), lo(Symbol.SectionID), hi(Symbol.SectionID)]));
+                                  Writeln(F, Format('T %.2x %.2x 00 %.2x %.2x', [lo(WritePos), hi(WritePos), lo(ValueToWrite), hi(ValueToWrite)]));
+                                  Writeln(F, Format('R 00 00 %.2x %.2x 00 03 %.2x %.2x', [lo(Sct), hi(Sct), lo(Symbol.SectionID), hi(Symbol.SectionID)]));
                               end;
                               Inc(I, 2);
                             end;
@@ -540,14 +565,14 @@ begin
                               RPN := ParseRPN(Patch.RPN);
                               if Length(RPN) > 1 then Die('Not handling bigger RPN on JR');
                               Symbol := RObj.Symbols[RPN[0].SymbolID];
-                              Writeln(F, Format('T %.2x %.2x %.2x', [lo(WritePos), hi(WritePos), Byte(Symbol.Value - I - 1)]));
+                              Writeln(F, Format('T %.2x %.2x 00 %.2x', [lo(WritePos), hi(WritePos), Byte(Symbol.Value - I - 1)]));
                               Writeln(F, Format('R 00 00 %.2x %.2x', [lo(Sct), hi(Sct)]));
                               Inc(I);
                             end
             else            Die('Unsupported patch type: %d', [Patch.PatchType]);
           end;
         end else begin
-          Writeln(F, Format('T %.2x %.2x %.2x', [lo(WritePos), hi(WritePos), Section.Data[I]]));
+          Writeln(F, Format('T %.2x %.2x 00 %.2x', [lo(WritePos), hi(WritePos), Section.Data[I]]));
           Writeln(F, Format('R 00 00 %.2x %.2x', [lo(Sct), hi(Sct)]));
           Inc(I);
         end;
