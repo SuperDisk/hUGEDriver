@@ -224,7 +224,6 @@ hUGE_init::
 
     ld a, %11110000
     ld [envelope1], a
-    ld a, %11110000
     ld [envelope2], a
 
     ld a, 100
