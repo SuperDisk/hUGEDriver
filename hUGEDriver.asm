@@ -735,7 +735,7 @@ fx_vol_slide:
     swap a
     sub d
     jr nc, .cont1
-    ld a, 0
+    xor a
 .cont1:
     add e
     cp $10
@@ -1594,7 +1594,7 @@ process_tick:
 
 _newrow:
     ;; Reset tick to 0
-    xor a ; ld a, 0
+    xor a
     ld [tick], a
 
     ;; Check if we need to perform a row break or pattern break
@@ -1612,7 +1612,7 @@ _newrow:
 
     ;; Maybe use HL instead?
     push af
-    ld a, 0
+    xor a
     ld [next_order], a
     ld [row_break], a
     pop af
@@ -1641,7 +1641,7 @@ _neworder:
     add a, 2
     cp c
     jr nz, _update_current_order
-    ld a, 0
+    xor a
 _update_current_order:
     ;; Call with:
     ;; A: The order to load
