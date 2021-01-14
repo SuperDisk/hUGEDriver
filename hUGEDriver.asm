@@ -1585,26 +1585,26 @@ _addr = _addr + 1
 .after_effect4:
 
 process_tick:
-    ld a, [counter]
-    inc a
-    ld [counter], a
+    ld hl, counter
+    inc [hl]
 
     ld a, [ticks_per_row]
     ld b, a
 
-    ld a, [tick]
+    ld hl, tick
+    ld a, [hl]
     inc a
 
     cp b
     jr z, _newrow
 
-    ld [tick], a
+    ld [hl], a
     ret
 
 _newrow:
     ;; Reset tick to 0
     xor a
-    ld [tick], a
+    ld [hl], a
 
     ;; Check if we need to perform a row break or pattern break
     ld a, [row_break]
