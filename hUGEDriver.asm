@@ -380,7 +380,7 @@ _convert_ch4_note:
 
     ; C := (A mod 4)+4;
     ld a, h
-    and 3
+    and 3 ; mod 4
     add 4
 
     ; A := (C or (B shl 4))
@@ -441,7 +441,6 @@ _update_channel4:
     ld a, e
     call _convert_ch4_note
     ld [rAUD4POLY], a
-    ; ld a, c
     xor a
     ld [rAUD4GO], a
     ret
