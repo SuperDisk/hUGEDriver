@@ -1,4 +1,4 @@
-include "include/hardware.inc"
+include "include/HARDWARE.INC"
 include "include/hUGE.inc"
 
 add_a_to_r16: MACRO
@@ -157,11 +157,15 @@ highmask4: db
 
 _end_vars:
 
-SECTION "Sound Driver", ROM0
+SECTION "Sound Driver", ROMX
 
+_hUGE_init_banked::
+    ld hl, sp+2+4
+    jr continue_init
 _hUGE_init::
+    ld hl, sp+2
+continue_init:
     push bc
-    ld hl, sp+4
     ld a, [hl+]
     ld h, [hl]
     ld l, a
@@ -169,9 +173,13 @@ _hUGE_init::
     pop bc
     ret
 
+_hUGE_mute_channel_banked::
+    ld hl, sp+3+4
+    jr continue_mute
 _hUGE_mute_channel::
+    ld hl, sp+3
+continue_mute:
     push bc
-    ld hl, sp+5
     ld a, [hl-]
     and 1
     ld c, a
@@ -1270,6 +1278,7 @@ checkMute: MACRO
     jp nz, \2
 ENDM
 
+_hUGE_dosound_banked::
 _hUGE_dosound::
     ld a, [tick]
     or a
