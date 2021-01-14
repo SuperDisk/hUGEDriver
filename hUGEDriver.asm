@@ -255,35 +255,34 @@ _refresh_patterns:
     ;; an order index
 
     ;; Call with c set to what order to load
-    push bc
+    ld hl, order1
+    ld de, pattern1
+    call .load_pattern
 
-    ld hl, order_cnt
-    ld b, [hl]
-    inc hl
+    ld hl, order2
+    call .load_pattern
+
+    ld hl, order3
+    call .load_pattern
+
+    ld hl, order4
+    call .load_pattern
+
+    ret
+
+.load_pattern:
     ld a, [hl+]
     ld h, [hl]
     ld l, a
     ld a, c
     add_a_to_hl
 
-    ld de, pattern1
-    ld c, 4
-
-.loop:
     ld a, [hl+]
     ld [de], a
     inc de
-
-    ld a, [hl-]
+    ld a, [hl]
     ld [de], a
     inc de
-
-    ld a, b
-    add_a_to_hl
-    dec c
-    jr nz, .loop
-
-    pop bc
     ret
 
 _load_note_data:
