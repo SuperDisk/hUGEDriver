@@ -68,6 +68,7 @@ _start_vars:
 
 ;; active song descriptor
 order_cnt: db
+_start_song_descriptor_pointers:
 order1: dw
 order2: dw
 order3: dw
@@ -79,6 +80,7 @@ noise_instruments: dw
 
 routines: dw
 waves: dw
+_end_song_descriptor_pointers:
 
 ;; variables
 mute_channels: db
@@ -233,7 +235,7 @@ hUGE_init::
     ld a, [de]
     ld [order_cnt], a
 
-    ld c, waves+2 - order1
+    ld c, _end_song_descriptor_pointers - (_start_song_descriptor_pointers)
     ld de, order1
 
 .copy_song_descriptor_loop:
