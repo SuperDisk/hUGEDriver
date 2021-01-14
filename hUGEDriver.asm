@@ -266,9 +266,7 @@ _refresh_patterns:
     call .load_pattern
 
     ld hl, order4
-    call .load_pattern
-
-    ret
+    jr .load_pattern
 
 .load_pattern:
     ld a, [hl+]
@@ -1602,8 +1600,7 @@ process_tick:
 
 _newrow:
     ;; Reset tick to 0
-    xor a
-    ld [hl], a
+    ld [hl], 0
 
     ;; Check if we need to perform a row break or pattern break
     ld a, [row_break]
