@@ -61,13 +61,6 @@ load_de_ind: MACRO
     ld d, a
 ENDM
 
-copy_pointer_from_hl: MACRO
-    ld a, [hl+]
-    ld [\1], a
-    ld a, [hl+]
-    ld [\1+1], a
-ENDM
-
 PATTERN_LENGTH EQU 64
 
 SECTION "Playback variables", WRAM0
@@ -240,48 +233,55 @@ hUGE_init::
     ld a, [de]
     ld [order_cnt], a
 
-    copy_pointer_from_hl order1
-    copy_pointer_from_hl order2
-    copy_pointer_from_hl order3
-    copy_pointer_from_hl order4
+    ld c, waves+2 - order1
+    ld de, order1
 
-    copy_pointer_from_hl duty_instruments
-    copy_pointer_from_hl wave_instruments
-    copy_pointer_from_hl noise_instruments
-
-    copy_pointer_from_hl routines
-    copy_pointer_from_hl waves
+.copy_song_descriptor_loop:
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec c
+    jr nz, .copy_song_descriptor_loop
 
     ld a, [current_order]
     ld c, a ;; Current order index
-    call _refresh_patterns
 
-    ret
+    ;; Fall through into _refresh_patterns
 
 _refresh_patterns:
-;; Loads pattern registers with pointers to correct pattern based on
-;; an order index
+    ;; Loads pattern registers with pointers to correct pattern based on
+    ;; an order index
 
-;; Call with c set to what order to load
-load_pattern: MACRO
-    ld hl, \1
+    ;; Call with c set to what order to load
+    push bc
+
+    ld hl, order_cnt
+    ld b, [hl]
+    inc hl
     ld a, [hl+]
     ld h, [hl]
     ld l, a
-    ld a, b
-    ld b, 0
-    add hl, bc
-    ld b, a
+    ld a, c
+    add_a_to_hl
 
+    ld de, pattern1
+    ld c, 4
+
+.loop:
     ld a, [hl+]
-    ld [\2], a
-    ld a, [hl+]
-    ld [\2+1], a
-ENDM
-    load_pattern order1, pattern1
-    load_pattern order2, pattern2
-    load_pattern order3, pattern3
-    load_pattern order4, pattern4
+    ld [de], a
+    inc de
+
+    ld a, [hl-]
+    ld [de], a
+    inc de
+
+    ld a, b
+    add_a_to_hl
+    dec c
+    jr nz, .loop
+
+    pop bc
     ret
 
 _load_note_data:
