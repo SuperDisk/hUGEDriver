@@ -255,6 +255,11 @@ _refresh_patterns:
     ;; an order index
 
     ;; Call with c set to what order to load
+
+    IF DEF(PREVIEW_MODE)
+    db $fc ; signal order update to tracker
+    ENDC
+
     ld hl, order1
     ld de, pattern1
     call .load_pattern
@@ -1660,7 +1665,7 @@ _noreset:
     ld [row], a
 
     IF DEF(PREVIEW_MODE)
-    db $fd
+    db $fd ; signal row update to tracker
     ENDC
     ret
 
