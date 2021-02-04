@@ -19,12 +19,12 @@ type
     BankAlias: boolean;
     BankValue: Integer;
 
-    FileName: String;
-    LineNum, SectionID, Value: LongInt;
+    SourceFile, LineNum, SectionID, Value: LongInt;
   end;
 
   TRPatch = packed record
-    SourceFile: String;
+    SourceFile: LongInt;
+    LineNo: LongInt;
     Offset: LongInt;
     PCSectionID: LongInt;
     PCOffset: LongInt;
@@ -48,12 +48,24 @@ type
     Patches: array of TRPatch;
   end;
 
+  TRNode = packed record
+    ParentID: LongInt;
+    ParentLineNo: LongInt;
+    NodeType: Byte;
+
+    Name: String;
+    Depth: LongInt;
+    Iter: array of LongInt;
+  end;
+
   TRObj = packed record
     ID: array[0..3] of AnsiChar;
     RevisionNumber: LongInt;
     NumberOfSymbols: LongInt;
     NumberOfSections: LongInt;
+    NumberOfNodes: LongInt;
 
+    Nodes: array of TRNode;
     Symbols: array of TRSymbol;
     Sections: array of TRSection;
   end;
@@ -135,7 +147,7 @@ const
   PATCH_JR = 3;
 
 procedure Die(const S: String); overload;
-begin WriteLn('ERROR:', S); Halt; end;
+begin WriteLn('ERROR: ', S); Halt; end;
 procedure Die(const fmt: String; const params: array of const); overload;
 begin Die(format(fmt, params)); end;
 
@@ -144,19 +156,43 @@ const Sign : array[0..3] of AnsiChar = 'RGB9';
 var I, J: Integer;
 begin
   with TObjFileStream.Create(afilename, fmOpenRead) do try 
-    Read(Result, SizeOf(TRObj) - SizeOf(Result.Symbols) - SizeOf(Result.Sections));
-    if not (CompareMem(@Result.ID, @Sign, sizeof(Result.ID)) and (Result.RevisionNumber = 5)) then Die('Unsupported object file version!');
+    Read(Result, SizeOf(TRObj) - SizeOf(Result.Symbols) - SizeOf(Result.Sections) - SizeOf(Result.Nodes));
+
+    if (not CompareMem(@Result.ID, @Sign, sizeof(Result.ID))) or (Result.RevisionNumber <> 6) then
+      Die(
+        'Unsupported object file version! This version of rgb2sdas supports RGB9, revision 6 files. The provided file is '+
+        Result.ID+', revision '+IntToStr(Result.RevisionNumber)+'.'
+      );
+
     SetLength(Result.Symbols, Result.NumberOfSymbols);
     SetLength(Result.Sections, Result.NumberOfSections);
+    SetLength(Result.Nodes, Result.NumberOfNodes);
+
+    for I := Result.NumberOfNodes-1 downto 0 do begin
+      Result.Nodes[I] := Default(TRNode);
+      with Result.Nodes[I] do begin
+        Read(ParentID, SizeOf(ParentID));
+        Read(ParentLineNo, SizeOf(ParentLineNo));
+        Read(NodeType, SizeOf(NodeType));
+
+        if NodeType <> 0 then
+          Name := ReadNullTerm
+        else begin
+          Read(Depth, SizeOf(Depth));
+          SetLength(Iter, Depth);
+          Read(Iter[0], Depth*SizeOf(LongInt));
+        end;
+      end;
+    end;
 
     for I := 0 to Result.NumberOfSymbols-1 do begin
       Result.Symbols[I] := Default(TRSymbol);
       with Result.Symbols[I] do begin
         ID := I;
         Name := ReadNullTerm;
-        Read(SymType, 1);
+        Read(SymType, SizeOf(SymType));
         if ((SymType and $7F) <> SYM_IMPORT) then begin
-          FileName := ReadNullTerm;
+          Read(SourceFile, SizeOf(SourceFile));
           Read(LineNum, SizeOf(LineNum));
           Read(SectionID, SizeOf(SectionID));
           Read(Value, SizeOf(Value));
@@ -185,7 +221,8 @@ begin
 
       for J := 0 to Result.Sections[I].NumberOfPatches-1 do begin
         with Result.Sections[I].Patches[J] do begin
-          SourceFile := ReadNullTerm;
+          Read(SourceFile, SizeOf(SourceFile));
+          Read(LineNo, SizeOf(LineNo));
           Read(Offset, SizeOf(Offset));
           Read(PCSectionID, SizeOf(PCSectionID));
           Read(PCOffset, SizeOf(PCOffset));
