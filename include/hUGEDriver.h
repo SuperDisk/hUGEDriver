@@ -103,4 +103,7 @@ enum hUGE_mute_t    {HT_CH_PLAY = 0, HT_CH_MUTE};
 void hUGE_mute_channel(enum hUGE_channel_t ch, enum hUGE_mute_t mute);
 void hUGE_mute_channel_banked(enum hUGE_channel_t ch, enum hUGE_mute_t mute) __banked;
 
+void hUGE_reset_wave();
+void hUGE_reset_wave_banked() __banked;
+
 #endif
