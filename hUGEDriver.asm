@@ -99,7 +99,7 @@ temp_note_value: dw
 row: db
 tick: db
 counter: db
-hUGE_current_wave::
+_hUGE_current_wave::
 current_wave: db
 
 ;; Amount to be shifted in order to skip a channel.
@@ -154,12 +154,6 @@ highmask4: db
 _end_vars:
 
 SECTION "Sound Driver", ROMX
-
-_hUGE_reset_wave_banked::
-_hUGE_reset_wave::
-    ld a, 100
-    ld [current_wave], a
-    ret
 
 _hUGE_init_banked::
     ld hl, sp+2+4
