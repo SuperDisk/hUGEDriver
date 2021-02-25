@@ -8,7 +8,7 @@ This is the repository for hUGEDriver, the music driver for the Game Boy which p
 2. Choose a *song descriptor* name. This is what you will refer to the song as in your code. It must be a valid RGBDS symbol.
 3. Place the exported `.asm` file in your RGBDS project.
 4. Load `hl` with your song descriptor name, and `call hUGE_init`
-5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
+5. In your game's main loop or in a VBlank interrupt, `call _hUGE_dosound`
 6. When assembling your game, be sure to specify your music file and hUGEDriver.asm in your call to `rgbasm`/`rgblink`!
 
 Be sure to enable sound playback before you start!
