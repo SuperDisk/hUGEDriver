@@ -152,7 +152,7 @@ highmask4: db
 
 _end_vars:
 
-SECTION "Sound Driver", ROMX
+SECTION "Sound Driver", ROM0
 
 _hUGE_init_banked::
     ld hl, sp+2+4
