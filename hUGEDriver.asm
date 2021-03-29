@@ -99,6 +99,7 @@ temp_note_value: dw
 row: db
 tick: db
 counter: db
+_hUGE_current_wave::
 current_wave: db
 
 ;; Amount to be shifted in order to skip a channel.
