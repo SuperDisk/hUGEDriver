@@ -224,7 +224,7 @@ hUGE_init::
 .fill_loop:
     ld [hl+], a
     dec c
-    jp nz, .fill_loop
+    jr nz, .fill_loop
     ENDC
 
     ld a, %11110000
@@ -257,7 +257,6 @@ hUGE_init::
 
     ld a, [current_order]
     ld c, a ;; Current order index
-
     ;; Fall through into _refresh_patterns
 
 _refresh_patterns:
@@ -270,8 +269,9 @@ _refresh_patterns:
     db $fc ; signal order update to tracker
     ENDC
 
-    ld hl, order1
     ld de, pattern1
+
+    ld hl, order1
     call .load_pattern
 
     ld hl, order2
@@ -281,7 +281,7 @@ _refresh_patterns:
     call .load_pattern
 
     ld hl, order4
-    jr .load_pattern
+    ;; Fall through into .load_pattern
 
 .load_pattern:
     ld a, [hl+]
@@ -1278,7 +1278,7 @@ _setup_instrument_pointer:
 checkMute: MACRO
     ld a, [mute_channels]
     bit \1, a
-    jp nz, \2
+    jr nz, \2
 ENDM
 
 _hUGE_dosound_banked::
@@ -1544,40 +1544,7 @@ _addr = _addr + 1
 
     loadShort pattern4, b, c
     call _load_note_data
-    cp LAST_NOTE
-    jp nc, .done_macro
-    ld h, a
 
-    load_de_ind noise_instruments
-    call _setup_instrument_pointer
-    jr z, .done_macro ; No instrument, thus no macro
-
-    ld a, [tick]
-    cp 7
-    jp nc, .done_macro
-
-    inc de
-    push de
-    push de
-
-    add_a_to_de
-    ld a, [de]
-    add h
-    call _convert_ch4_note
-    ld d, a
-    pop hl
-    ld a, [hl]
-    and %10000000
-    swap a
-    or d
-    ld [rAUD4POLY], a
-
-    pop de
-    ld a, [de]
-    and %01000000
-    ld [rAUD4GO], a
-
-.done_macro:
     ld a, c
     or a
     jr z, .after_effect4
