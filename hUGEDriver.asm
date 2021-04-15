@@ -82,7 +82,7 @@ routines: dw
 waves: dw
 _end_song_descriptor_pointers:
 
-;; variables
+;; Variables
 mute_channels: db
 
 pattern1: dw
@@ -102,9 +102,6 @@ counter: db
 _hUGE_current_wave::
 current_wave: db
 
-;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 3
-
 channels:
 
 ;;;;;;;;;;;
@@ -117,6 +114,9 @@ channel_note1: db
 vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
+macro1: dw
+macro_step1: db
+unused1: db
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -128,6 +128,9 @@ channel_note2: db
 vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
+macro2: dw
+macro_step2: db
+unused2: db
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -139,6 +142,9 @@ channel_note3: db
 vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
+macro3: dw
+macro_step3: db
+unused3: db
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -150,6 +156,9 @@ channel_note4: db
 vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
+macro4: dw
+macro_step4: db
+unused4: db
 
 _end_vars:
 
@@ -487,7 +496,7 @@ _playnote2:
 _playnote3:
     retMute 2
 
-    ;; This fixes a gameboy hardware quirk, apparently.
+    ;; This fixes a gameboy hardware quirk.
     ;; The problem is emulated accurately in BGB.
     ;; https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
     xor a
@@ -557,17 +566,17 @@ _doeffect:
     jp fx_porta_down                   ;2xy
     jp fx_toneporta                    ;3xy
     jp fx_vibrato                      ;4xy
-    jp fx_set_master_volume            ;5xy ; global
+    jp fx_set_master_volume            ;5xy
     jp fx_call_routine                 ;6xy
     jp fx_note_delay                   ;7xy
     jp fx_set_pan                      ;8xy
     jp fx_set_duty                     ;9xy
     jp fx_vol_slide                    ;Axy
-    jp fx_pos_jump                     ;Bxy ; global
+    jp fx_pos_jump                     ;Bxy
     jp fx_set_volume                   ;Cxy
-    jp fx_pattern_break                ;Dxy ; global
+    jp fx_pattern_break                ;Dxy
     jp fx_note_cut                     ;Exy
-    jp fx_set_speed                    ;Fxy ; global
+    jp fx_set_speed                    ;Fxy
 
 setup_channel_pointer:
     ;; Call with:
@@ -576,10 +585,15 @@ setup_channel_pointer:
     ;; Returns value in HL
 
     ld a, b
-    REPT CHANNEL_SIZE_EXPONENT
-        add a
-    ENDR
+
+    ;; Multiply A by 12
+    add a
+    add a
+    ld b, a
+    add a
+    add b
     add d
+
     ld hl, channels
     add_a_to_hl
     ret
@@ -1240,20 +1254,6 @@ loadShort: MACRO
     ld \2, a
 ENDM
 
-;; TODO: Find some way to de-duplicate this code!
-_setup_instrument_pointer_ch4:
-    ;; Call with:
-    ;; Instrument/High nibble of effect in B
-    ;; Stores whether the instrument was real in the Z flag
-    ;; Stores the instrument pointer in DE
-    ld a, b
-    and %11110000
-    swap a
-    ret z ; If there's no instrument, then return early.
-
-    dec a ; Instrument 0 is "no instrument"
-    add a
-    jp _setup_instrument_pointer.finish
 _setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1265,8 +1265,8 @@ _setup_instrument_pointer:
     ret z ; If there's no instrument, then return early.
 
     dec a ; Instrument 0 is "no instrument"
-.finish:
-    ;; Shift left twice to multiply by 4
+    ;; Shift left thrice to multiply by 8
+    add a
     add a
     add a
 
@@ -1549,7 +1549,7 @@ _addr = _addr + 1
     ld h, a
 
     load_de_ind noise_instruments
-    call _setup_instrument_pointer_ch4
+    call _setup_instrument_pointer
     jr z, .done_macro ; No instrument, thus no macro
 
     ld a, [tick]
