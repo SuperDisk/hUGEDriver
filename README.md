@@ -1,6 +1,8 @@
 ![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
 ---
 
+Join the [hUGETracker Discord server for help](https://discord.gg/abbHjEj5WH) integrating with your game, or just general discussion!
+
 This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker.](https://nickfa.ro/index.php/HUGETracker)
 
 # Quick start (RGBDS)
@@ -73,8 +75,6 @@ __critical {
 ```
 
 Check out `player.asm` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
-
-Feel free to contact me on Discord (superdisk#5726) or via email (on my profile) if you want help integrating with your game, or just wanna talk!
 
 # Files in this repo
 
