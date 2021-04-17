@@ -1,7 +1,7 @@
 ![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
 ---
 
-Join the [hUGETracker Discord server for help](https://discord.gg/abbHjEj5WH) integrating with your game, or just general discussion!
+Join the [hUGETracker Discord server](https://discord.gg/abbHjEj5WH) for help integrating with your game, or just general discussion!
 
 This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker.](https://nickfa.ro/index.php/HUGETracker)
 
