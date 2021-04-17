@@ -3,7 +3,7 @@
 
 This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker.](https://nickfa.ro/index.php/HUGETracker)
 
-Join the [hUGETracker Discord server](https://discord.gg/abbHjEj5WH) for help integrating with your game, or just general discussion!
+If you want help using the tracker, driver, or just want to chat, join the [hUGETracker Discord server](https://discord.gg/abbHjEj5WH)!
 
 # Quick start (RGBDS)
 1. Export your song in "RGBDS .asm" format in hUGETracker.
