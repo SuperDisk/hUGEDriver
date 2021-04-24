@@ -61,7 +61,10 @@ load_de_ind: MACRO
     ld d, a
 ENDM
 
+;; Maximum pattern length
 PATTERN_LENGTH EQU 64
+;; Amount to be shifted in order to skip a channel.
+CHANNEL_SIZE_EXPONENT EQU 3
 
 SECTION "Playback variables", WRAM0
 _start_vars:
@@ -102,11 +105,7 @@ counter: db
 _hUGE_current_wave::
 current_wave: db
 
-;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 3
-
 channels:
-
 ;;;;;;;;;;;
 ;;Channel 1
 ;;;;;;;;;;;
@@ -205,6 +204,18 @@ hUGE_mute_channel::
     call nz, note_cut
     ret
 
+_hUGE_set_position_banked::
+    ld hl, sp+2+4
+    jr continue_set_position
+_hUGE_set_position::
+    ld hl, sp+2
+continue_set_position:
+    push bc
+    ld c, [hl]
+    call hUGE_set_position
+    pop  bc
+    ret
+    
 hUGE_init::
     push hl
     if !DEF(PREVIEW_MODE)
@@ -839,6 +850,7 @@ fx_set_speed:
     ld [ticks_per_row], a
     ret
 
+hUGE_set_position::
 fx_pos_jump:
     ;; A: tick
     ;; ZF: (tick == 0)
@@ -1618,15 +1630,11 @@ _newrow:
     dec a
     ld b, a
 
-    ld a, [next_order]
-    or a
-
-    ;; Maybe use HL instead?
-    push af
+    ld hl, row_break
     xor a
-    ld [next_order], a
-    ld [row_break], a
-    pop af
+    ld [hl-], a
+    or [hl]     ; a = [next_order], zf = ([next_order] == 0)
+    ld [hl], 0
 
     jr z, _neworder
 
