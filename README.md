@@ -91,4 +91,4 @@ Check out `player.asm` for a full fledged example of how to use the driver in an
 
 # License
 
-This driver is dedicated to the public domain.
+hUGETracker and hUGEDriver are dedicated to the public domain.
