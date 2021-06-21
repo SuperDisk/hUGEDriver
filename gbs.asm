@@ -11,9 +11,9 @@ dw _hUGE_dosound ; play address
 dw $fffe ; stack pointer
 db 0
 db 0
-db GBS_TITLE
-db GBS_AUTHOR
-db GBS_COPYRIGHT
+db "{GBS_TITLE}"
+db "{GBS_AUTHOR}"
+db "{GBS_COPYRIGHT}"
 
 ds $400 ; padding bytes that will be removed manually
 
