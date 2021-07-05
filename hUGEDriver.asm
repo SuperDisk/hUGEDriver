@@ -63,8 +63,6 @@ ENDM
 
 ;; Maximum pattern length
 PATTERN_LENGTH EQU 64
-;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 3
 
 SECTION "Playback variables", WRAM0
 _start_vars:
@@ -116,6 +114,10 @@ channel_note1: db
 vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
+macro1: dw
+macro_index1: db
+macro_loop1: db
+ds 4 ; unused
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -127,6 +129,10 @@ channel_note2: db
 vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
+macro2: dw
+macro_index2: db
+macro_loop2: db
+ds 4 ; unused
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -138,6 +144,10 @@ channel_note3: db
 vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
+macro3: dw
+macro_index3: db
+macro_loop3: db
+ds 4 ; unused
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -149,6 +159,10 @@ channel_note4: db
 vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
+macro4: dw
+macro_index4: db
+macro_loop4: db
+ds 4 ; unused
 
 _end_vars:
 
@@ -587,9 +601,7 @@ setup_channel_pointer:
     ;; Returns value in HL
 
     ld a, b
-    REPT CHANNEL_SIZE_EXPONENT
-        add a
-    ENDR
+    swap a ; multiply by 16
     add d
     ld hl, channels
     add_a_to_hl
