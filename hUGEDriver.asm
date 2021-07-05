@@ -297,7 +297,7 @@ _refresh_patterns:
     call .load_pattern
 
     ld hl, order4
-    jr .load_pattern
+    ;; Fall through into .load_pattern
 
 .load_pattern:
     ld a, [hl+]
