@@ -116,6 +116,8 @@ channel_note1: db
 vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
+macro1:
+ds 8
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -127,6 +129,8 @@ channel_note2: db
 vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
+macro2:
+ds 8
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -138,6 +142,8 @@ channel_note3: db
 vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
+macro3:
+ds 8
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -149,6 +155,8 @@ channel_note4: db
 vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
+macro4:
+ds 8
 
 _end_vars:
 
@@ -587,9 +595,7 @@ setup_channel_pointer:
     ;; Returns value in HL
 
     ld a, b
-    REPT CHANNEL_SIZE_EXPONENT
-        add a
-    ENDR
+    swap a
     add d
     ld hl, channels
     add_a_to_hl
@@ -1253,19 +1259,6 @@ loadShort: MACRO
 ENDM
 
 ;; TODO: Find some way to de-duplicate this code!
-_setup_instrument_pointer_ch4:
-    ;; Call with:
-    ;; Instrument/High nibble of effect in B
-    ;; Stores whether the instrument was real in the Z flag
-    ;; Stores the instrument pointer in DE
-    ld a, b
-    and %11110000
-    swap a
-    ret z ; If there's no instrument, then return early.
-
-    dec a ; Instrument 0 is "no instrument"
-    add a
-    jp _setup_instrument_pointer.finish
 _setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1281,10 +1274,27 @@ _setup_instrument_pointer:
     ;; Shift left twice to multiply by 4
     add a
     add a
+    add a
 
     add_a_to_de
 
     rla ; reset the Z flag
+    ret
+
+load_macro:
+    ;; Call with:
+    ;; DE = Pointer to instrument macro data
+    ;; HL = Pointer to channel macro data
+    REPT 3
+    ld a, [de]
+    ld [hl+], a
+    inc de
+    ENDR
+
+    ;; Zero out macro index
+    xor a
+    ld [hl], a
+
     ret
 
 checkMute: MACRO
@@ -1322,6 +1332,12 @@ _hUGE_dosound::
     ld [rAUD1LEN], a
     ld a, [de]
     ld [rAUD1ENV], a
+
+    push hl
+    ld hl, macro1
+    call load_macro
+    pop hl
+
     inc de
     ld a, [de]
 
@@ -1366,6 +1382,12 @@ _hUGE_dosound::
     ld a, [de]
     ld [rAUD2ENV], a
     inc de
+
+    push hl
+    ld hl, macro2
+    call load_macro
+    pop hl
+
     ld a, [de]
 
 .write_mask2:
@@ -1416,6 +1438,16 @@ _hUGE_dosound::
     ld [rAUD3LEVEL], a
     ld a, [de]
     inc de
+
+    push af
+    push hl
+    ld hl, macro3
+    call load_macro
+    pop hl
+    pop af
+    ; inc de
+    ; inc de
+    ; inc de
 
     ;; Check to see if we need to copy a wave and then do so
     ld hl, current_wave
@@ -1479,6 +1511,14 @@ _addr = _addr + 1
 
     ld a, [hl+]
     ld [rAUD4ENV], a
+
+    ; push hl
+    ; ld hl, macro4
+    ; call load_macro
+    ; pop hl
+    inc hl
+    inc hl
+    inc hl
 
     ld a, [hl]
     and %00111111
@@ -1561,7 +1601,7 @@ _addr = _addr + 1
     ld h, a
 
     load_de_ind noise_instruments
-    call _setup_instrument_pointer_ch4
+    call _setup_instrument_pointer
     jr z, .done_macro ; No instrument, thus no macro
 
     ld a, [tick]
