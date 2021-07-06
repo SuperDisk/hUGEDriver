@@ -459,6 +459,12 @@ _update_channel4:
     ld [rAUD4GO], a
     ret
 
+_play_note_routines:
+    jr _playnote1
+    jr _playnote2
+    jr _playnote3
+    jr _playnote4
+
 _playnote1:
     retMute 0
 
@@ -774,8 +780,7 @@ fx_vol_slide:
 
     ld hl, _play_note_routines
     ld a, b
-    add b
-    add b
+    add a
     add_a_to_hl
     jp hl
 
@@ -826,16 +831,9 @@ fx_note_delay:
 
     ld hl, _play_note_routines
     ld a, b
-    add b
-    add b
+    add a
     add_a_to_hl
     jp hl
-
-_play_note_routines:
-    jp _playnote1
-    jp _playnote2
-    jp _playnote3
-    jp _playnote4
 
 fx_set_speed:
     ret nz
@@ -1337,11 +1335,9 @@ _hUGE_dosound::
     ld e, 0
     call _doeffect
 
-    pop af
-
-    jr nc, .after_note1
-
-    call _playnote1
+    pop af              ; 1 byte
+    jr nc, .after_note1 ; 2 bytes
+    call _playnote1     ; 3 bytes
 
 .after_note1:
     ;; Note playback
@@ -1380,11 +1376,9 @@ _hUGE_dosound::
     ld e, 1
     call _doeffect
 
-    pop af
-
-    jr nc, .after_note2
-
-    call _playnote2
+    pop af              ; 1 byte
+    jr nc, .after_note2 ; 2 bytes
+    call _playnote2     ; 3 bytes
 
 .after_note2:
     loadShort pattern3, b, c
@@ -1448,10 +1442,9 @@ _addr = _addr + 1
     ld e, 2
     call _doeffect
 
-    pop af
-    jr nc, .after_note3
-
-    call _playnote3
+    pop af              ; 1 byte
+    jr nc, .after_note3 ; 2 bytes
+    call _playnote3     ; 3 bytes
 
 .after_note3:
     loadShort pattern4, b, c
@@ -1502,10 +1495,9 @@ _addr = _addr + 1
     ld e, 3
     call _doeffect
 
-    pop af
-    jr nc, .after_note4
-
-    call _playnote4
+    pop af              ; 1 byte
+    jr nc, .after_note4 ; 2 bytes
+    call _playnote4     ; 3 bytes
 
 .after_note4:
     ;; finally just update the tick/order/row values
@@ -1523,7 +1515,7 @@ _addr = _addr + 1
     jr z, .after_effect1
 
     ld e, 0
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect1:
     checkMute 1, .after_effect2
@@ -1536,7 +1528,7 @@ _addr = _addr + 1
     jr z, .after_effect2
 
     ld e, 1
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect2:
     checkMute 2, .after_effect3
@@ -1549,7 +1541,7 @@ _addr = _addr + 1
     jr z, .after_effect3
 
     ld e, 2
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect3:
     checkMute 3, .after_effect4
@@ -1595,7 +1587,7 @@ _addr = _addr + 1
     jr z, .after_effect4
 
     ld e, 3
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect4:
 
