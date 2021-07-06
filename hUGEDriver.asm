@@ -1430,8 +1430,8 @@ _hUGE_dosound::
 
 _addr = _AUD3WAVERAM
     REPT 16
-    ld a, [hl+]
-    ldh [_addr], a
+        ld a, [hl+]
+        ldh [_addr], a
 _addr = _addr + 1
     ENDR
 
