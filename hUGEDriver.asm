@@ -78,6 +78,7 @@ order4: dw
 duty_instruments: dw
 wave_instruments: dw
 noise_instruments: dw
+macros: dw
 
 routines: dw
 waves: dw
@@ -115,8 +116,8 @@ vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
 macro1: dw
-macro_index1: db
 macro_loop1: db
+macro_index1: db
 ds 4 ; unused
 
 ;;;;;;;;;;;
@@ -130,8 +131,8 @@ vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
 macro2: dw
-macro_index2: db
 macro_loop2: db
+macro_index2: db
 ds 4 ; unused
 
 ;;;;;;;;;;;
@@ -145,8 +146,8 @@ vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
 macro3: dw
-macro_index3: db
 macro_loop3: db
+macro_index3: db
 ds 4 ; unused
 
 ;;;;;;;;;;;
@@ -160,8 +161,8 @@ vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
 macro4: dw
-macro_index4: db
 macro_loop4: db
+macro_index4: db
 ds 4 ; unused
 
 _end_vars:
@@ -1264,23 +1265,11 @@ loadShort: MACRO
     ld \2, a
 ENDM
 
-;; TODO: Find some way to de-duplicate this code!
-_setup_instrument_pointer_ch4:
-    ;; Call with:
-    ;; Instrument/High nibble of effect in B
-    ;; Stores whether the instrument was real in the Z flag
-    ;; Stores the instrument pointer in DE
-    ld a, b
-    and %11110000
-    swap a
-    ret z ; If there's no instrument, then return early.
-
-    dec a ; Instrument 0 is "no instrument"
-    add a
-    jp _setup_instrument_pointer.finish
 _setup_instrument_pointer:
     ;; Call with:
+    ;; Instrument base pointer in DE
     ;; Instrument/High nibble of effect in B
+
     ;; Stores whether the instrument was real in the Z flag
     ;; Stores the instrument pointer in DE
     ld a, b
@@ -1289,8 +1278,8 @@ _setup_instrument_pointer:
     ret z ; If there's no instrument, then return early.
 
     dec a ; Instrument 0 is "no instrument"
-.finish:
-    ;; Shift left twice to multiply by 4
+    ;; Shift left thrice to multiply by 8
+    add a
     add a
     add a
 
@@ -1298,6 +1287,23 @@ _setup_instrument_pointer:
 
     rla ; reset the Z flag
     ret
+
+load_macro:
+    ;; Call with:
+    ;; DE = Pointer to instrument macro data
+    ;; HL = Pointer to channel macro data
+    REPT 3
+    ld a, [de]
+    ld [hl+], a
+    inc de
+    ENDR
+
+    ;; Zero out macro index
+    xor a
+    ld [hl], a
+
+    ret
+
 
 checkMute: MACRO
     ld a, [mute_channels]
@@ -1315,6 +1321,12 @@ _hUGE_dosound::
     loadShort pattern1, b, c
     ld de, channel_note1
     call _lookup_note
+
+    ld a, h
+    ld [temp_note_value], a
+    ld a, l
+    ld [temp_note_value+1], a
+
     push af
     jr nc, .do_setvol1
 
@@ -1327,25 +1339,26 @@ _hUGE_dosound::
     checkMute 0, .do_setvol1
 
     ld a, [de]
-    inc de
     ld [rAUD1SWEEP], a
-    ld a, [de]
     inc de
+
+    ld a, [de]
     ld [rAUD1LEN], a
+    inc de
+
     ld a, [de]
     ld [rAUD1ENV], a
     inc de
+
+    ld hl, macro1
+    call load_macro
+
     ld a, [de]
 
 .write_mask1:
     ld [highmask1], a
 
 .do_setvol1:
-    ld a, h
-    ld [temp_note_value], a
-    ld a, l
-    ld [temp_note_value+1], a
-
     ld e, 0
     call _doeffect
 
@@ -1360,6 +1373,12 @@ _hUGE_dosound::
     loadShort pattern2, b, c
     ld de, channel_note2
     call _lookup_note
+
+    ld a, h
+    ld [temp_note_value], a
+    ld a, l
+    ld [temp_note_value+1], a
+
     push af
     jr nc, .do_setvol2
 
@@ -1371,24 +1390,25 @@ _hUGE_dosound::
 
     checkMute 1, .do_setvol2
 
-    inc de
+    inc de ; skip sweep value
+
     ld a, [de]
-    inc de
     ld [rAUD2LEN], a
+    inc de
+
     ld a, [de]
     ld [rAUD2ENV], a
     inc de
+
+    ld hl, macro2
+    call load_macro
+
     ld a, [de]
 
 .write_mask2:
     ld [highmask2], a
 
 .do_setvol2:
-    ld a, h
-    ld [temp_note_value], a
-    ld a, l
-    ld [temp_note_value+1], a
-
     ld e, 1
     call _doeffect
 
@@ -1414,6 +1434,7 @@ _hUGE_dosound::
 
     load_de_ind wave_instruments
     call _setup_instrument_pointer
+
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask3
@@ -1421,11 +1442,13 @@ _hUGE_dosound::
     checkMute 2, .do_setvol3
 
     ld a, [de]
-    inc de
     ld [rAUD3LEN], a
-    ld a, [de]
     inc de
+
+    ld a, [de]
     ld [rAUD3LEVEL], a
+    inc de
+
     ld a, [de]
     inc de
 
@@ -1451,6 +1474,9 @@ _addr = _addr + 1
     ld [rAUD3ENA], a
 
 .no_wave_copy:
+    ld hl, macro3
+    call load_macro
+
     ld a, [de]
 
 .write_mask3:
@@ -1476,7 +1502,7 @@ _addr = _addr + 1
     call _convert_ch4_note
     ld [temp_note_value], a
 
-    ld de, 0
+    load_de_ind noise_instruments
     call _setup_instrument_pointer
 
     ld a, [highmask4]
@@ -1485,26 +1511,26 @@ _addr = _addr + 1
 
     checkMute 3, .do_setvol4
 
-    load_hl_ind noise_instruments
-    sla e
-    add hl, de
-
-    ld a, [hl+]
+    ld a, [de]
     ld [rAUD4ENV], a
+    inc de
 
-    ld a, [hl]
+    ld hl, macro4
+    call load_macro
+
+    ld a, [de]
     and %00111111
     ld [rAUD4LEN], a
 
     ld a, [temp_note_value]
     ld d, a
-    ld a, [hl]
+    ld a, [de]
     and %10000000
     swap a
     or d
     ld [temp_note_value], a
 
-    ld a, [hl]
+    ld a, [de]
     and %01000000
     or  %10000000
 .write_mask4:
@@ -1572,8 +1598,10 @@ _addr = _addr + 1
     jp nc, .done_macro
     ld h, a
 
+    jr .done_macro
+
     load_de_ind noise_instruments
-    call _setup_instrument_pointer_ch4
+    call _setup_instrument_pointer
     jr z, .done_macro ; No instrument, thus no macro
 
     ld a, [tick]
