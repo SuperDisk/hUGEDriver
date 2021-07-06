@@ -546,15 +546,15 @@ _doeffect:
     ;; Strip the instrument bits off leaving only effect code
     ld a, b
     and %00001111
-    ld b, a
-
-    ;; Multiply by 3 to get offset into table
-    ld a, b
-    add a, b
-    add a, b
+    ;; Multiply by 2 to get offset into table
+    add a, a
 
     ld hl, .jump
     add_a_to_hl
+    
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
 
     ld b, e
     ld a, [tick]
@@ -563,22 +563,22 @@ _doeffect:
 
 .jump:
     ;; Jump table for effect
-    jp fx_arpeggio                     ;0xy
-    jp fx_porta_up                     ;1xy
-    jp fx_porta_down                   ;2xy
-    jp fx_toneporta                    ;3xy
-    jp fx_vibrato                      ;4xy
-    jp fx_set_master_volume            ;5xy ; global
-    jp fx_call_routine                 ;6xy
-    jp fx_note_delay                   ;7xy
-    jp fx_set_pan                      ;8xy
-    jp fx_set_duty                     ;9xy
-    jp fx_vol_slide                    ;Axy
-    jp fx_pos_jump                     ;Bxy ; global
-    jp fx_set_volume                   ;Cxy
-    jp fx_pattern_break                ;Dxy ; global
-    jp fx_note_cut                     ;Exy
-    jp fx_set_speed                    ;Fxy ; global
+    dw fx_arpeggio                     ;0xy
+    dw fx_porta_up                     ;1xy
+    dw fx_porta_down                   ;2xy
+    dw fx_toneporta                    ;3xy
+    dw fx_vibrato                      ;4xy
+    dw fx_set_master_volume            ;5xy ; global
+    dw fx_call_routine                 ;6xy
+    dw fx_note_delay                   ;7xy
+    dw fx_set_pan                      ;8xy
+    dw fx_set_duty                     ;9xy
+    dw fx_vol_slide                    ;Axy
+    dw fx_pos_jump                     ;Bxy ; global
+    dw fx_set_volume                   ;Cxy
+    dw fx_pattern_break                ;Dxy ; global
+    dw fx_note_cut                     ;Exy
+    dw fx_set_speed                    ;Fxy ; global
 
 setup_channel_pointer:
     ;; Call with:
