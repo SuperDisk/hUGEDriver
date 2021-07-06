@@ -116,8 +116,10 @@ channel_note1: db
 vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
-macro1:
-ds 8
+macro1: dw
+macro_loop1: db
+macro_index1: db
+ds 4
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -129,8 +131,10 @@ channel_note2: db
 vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
-macro2:
-ds 8
+macro2: dw
+macro_loop2: db
+macro_index2: db
+ds 4
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -142,8 +146,10 @@ channel_note3: db
 vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
-macro3:
-ds 8
+macro3: dw
+macro_loop3: db
+macro_index3: db
+ds 4
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -155,8 +161,10 @@ channel_note4: db
 vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
-macro4:
-ds 8
+macro4: dw
+macro_loop4: db
+macro_index4: db
+ds 4
 
 _end_vars:
 
@@ -1439,16 +1447,6 @@ _hUGE_dosound::
     ld a, [de]
     inc de
 
-    push af
-    push hl
-    ld hl, macro3
-    call load_macro
-    pop hl
-    pop af
-    ; inc de
-    ; inc de
-    ; inc de
-
     ;; Check to see if we need to copy a wave and then do so
     ld hl, current_wave
     cp [hl]
@@ -1471,6 +1469,9 @@ _addr = _addr + 1
     ld [rAUD3ENA], a
 
 .no_wave_copy:
+    ld hl, macro3
+    call load_macro
+
     ld a, [de]
 
 .write_mask3:
@@ -1512,13 +1513,10 @@ _addr = _addr + 1
     ld a, [hl+]
     ld [rAUD4ENV], a
 
-    ; push hl
-    ; ld hl, macro4
-    ; call load_macro
-    ; pop hl
-    inc hl
-    inc hl
-    inc hl
+    push hl
+    ld hl, macro4
+    call load_macro
+    pop hl
 
     ld a, [hl]
     and %00111111
