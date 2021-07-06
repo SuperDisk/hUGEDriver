@@ -226,7 +226,7 @@ hUGE_init::
 .fill_loop:
     ld [hl+], a
     dec c
-    jp nz, .fill_loop
+    jr nz, .fill_loop
     ENDC
 
     ld a, %11110000
@@ -459,6 +459,12 @@ _update_channel4:
     ld [rAUD4GO], a
     ret
 
+_play_note_routines:
+    jr _playnote1
+    jr _playnote2
+    jr _playnote3
+    jr _playnote4
+
 _playnote1:
     retMute 0
 
@@ -546,15 +552,15 @@ _doeffect:
     ;; Strip the instrument bits off leaving only effect code
     ld a, b
     and %00001111
-    ld b, a
-
-    ;; Multiply by 3 to get offset into table
-    ld a, b
-    add a, b
-    add a, b
+    ;; Multiply by 2 to get offset into table
+    add a, a
 
     ld hl, .jump
     add_a_to_hl
+    
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
 
     ld b, e
     ld a, [tick]
@@ -563,22 +569,22 @@ _doeffect:
 
 .jump:
     ;; Jump table for effect
-    jp fx_arpeggio                     ;0xy
-    jp fx_porta_up                     ;1xy
-    jp fx_porta_down                   ;2xy
-    jp fx_toneporta                    ;3xy
-    jp fx_vibrato                      ;4xy
-    jp fx_set_master_volume            ;5xy ; global
-    jp fx_call_routine                 ;6xy
-    jp fx_note_delay                   ;7xy
-    jp fx_set_pan                      ;8xy
-    jp fx_set_duty                     ;9xy
-    jp fx_vol_slide                    ;Axy
-    jp fx_pos_jump                     ;Bxy ; global
-    jp fx_set_volume                   ;Cxy
-    jp fx_pattern_break                ;Dxy ; global
-    jp fx_note_cut                     ;Exy
-    jp fx_set_speed                    ;Fxy ; global
+    dw fx_arpeggio                     ;0xy
+    dw fx_porta_up                     ;1xy
+    dw fx_porta_down                   ;2xy
+    dw fx_toneporta                    ;3xy
+    dw fx_vibrato                      ;4xy
+    dw fx_set_master_volume            ;5xy ; global
+    dw fx_call_routine                 ;6xy
+    dw fx_note_delay                   ;7xy
+    dw fx_set_pan                      ;8xy
+    dw fx_set_duty                     ;9xy
+    dw fx_vol_slide                    ;Axy
+    dw fx_pos_jump                     ;Bxy ; global
+    dw fx_set_volume                   ;Cxy
+    dw fx_pattern_break                ;Dxy ; global
+    dw fx_note_cut                     ;Exy
+    dw fx_set_speed                    ;Fxy ; global
 
 setup_channel_pointer:
     ;; Call with:
@@ -774,8 +780,7 @@ fx_vol_slide:
 
     ld hl, _play_note_routines
     ld a, b
-    add b
-    add b
+    add a
     add_a_to_hl
     jp hl
 
@@ -826,16 +831,9 @@ fx_note_delay:
 
     ld hl, _play_note_routines
     ld a, b
-    add b
-    add b
+    add a
     add_a_to_hl
     jp hl
-
-_play_note_routines:
-    jp _playnote1
-    jp _playnote2
-    jp _playnote3
-    jp _playnote4
 
 fx_set_speed:
     ret nz
@@ -1265,7 +1263,7 @@ _setup_instrument_pointer_ch4:
 
     dec a ; Instrument 0 is "no instrument"
     add a
-    jp _setup_instrument_pointer.finish
+    jr _setup_instrument_pointer.finish
 _setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1290,7 +1288,7 @@ _setup_instrument_pointer:
 checkMute: MACRO
     ld a, [mute_channels]
     bit \1, a
-    jp nz, \2
+    jr nz, \2
 ENDM
 
 _hUGE_dosound_banked::
@@ -1337,11 +1335,9 @@ _hUGE_dosound::
     ld e, 0
     call _doeffect
 
-    pop af
-
-    jr nc, .after_note1
-
-    call _playnote1
+    pop af              ; 1 byte
+    jr nc, .after_note1 ; 2 bytes
+    call _playnote1     ; 3 bytes
 
 .after_note1:
     ;; Note playback
@@ -1380,11 +1376,9 @@ _hUGE_dosound::
     ld e, 1
     call _doeffect
 
-    pop af
-
-    jr nc, .after_note2
-
-    call _playnote2
+    pop af              ; 1 byte
+    jr nc, .after_note2 ; 2 bytes
+    call _playnote2     ; 3 bytes
 
 .after_note2:
     loadShort pattern3, b, c
@@ -1430,8 +1424,8 @@ _hUGE_dosound::
 
 _addr = _AUD3WAVERAM
     REPT 16
-    ld a, [hl+]
-    ldh [_addr], a
+        ld a, [hl+]
+        ldh [_addr], a
 _addr = _addr + 1
     ENDR
 
@@ -1448,10 +1442,9 @@ _addr = _addr + 1
     ld e, 2
     call _doeffect
 
-    pop af
-    jr nc, .after_note3
-
-    call _playnote3
+    pop af              ; 1 byte
+    jr nc, .after_note3 ; 2 bytes
+    call _playnote3     ; 3 bytes
 
 .after_note3:
     loadShort pattern4, b, c
@@ -1502,10 +1495,9 @@ _addr = _addr + 1
     ld e, 3
     call _doeffect
 
-    pop af
-    jr nc, .after_note4
-
-    call _playnote4
+    pop af              ; 1 byte
+    jr nc, .after_note4 ; 2 bytes
+    call _playnote4     ; 3 bytes
 
 .after_note4:
     ;; finally just update the tick/order/row values
@@ -1523,7 +1515,7 @@ _addr = _addr + 1
     jr z, .after_effect1
 
     ld e, 0
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect1:
     checkMute 1, .after_effect2
@@ -1536,7 +1528,7 @@ _addr = _addr + 1
     jr z, .after_effect2
 
     ld e, 1
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect2:
     checkMute 2, .after_effect3
@@ -1549,7 +1541,7 @@ _addr = _addr + 1
     jr z, .after_effect3
 
     ld e, 2
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect3:
     checkMute 3, .after_effect4
@@ -1557,7 +1549,7 @@ _addr = _addr + 1
     loadShort pattern4, b, c
     call _load_note_data
     cp LAST_NOTE
-    jp nc, .done_macro
+    jr nc, .done_macro
     ld h, a
 
     load_de_ind noise_instruments
@@ -1566,7 +1558,7 @@ _addr = _addr + 1
 
     ld a, [tick]
     cp 7
-    jp nc, .done_macro
+    jr nc, .done_macro
 
     inc de
     push de
@@ -1595,7 +1587,7 @@ _addr = _addr + 1
     jr z, .after_effect4
 
     ld e, 3
-    call _doeffect
+    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect4:
 
