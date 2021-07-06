@@ -226,7 +226,7 @@ hUGE_init::
 .fill_loop:
     ld [hl+], a
     dec c
-    jp nz, .fill_loop
+    jr nz, .fill_loop
     ENDC
 
     ld a, %11110000
@@ -1265,7 +1265,7 @@ _setup_instrument_pointer_ch4:
 
     dec a ; Instrument 0 is "no instrument"
     add a
-    jp _setup_instrument_pointer.finish
+    jr _setup_instrument_pointer.finish
 _setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1290,7 +1290,7 @@ _setup_instrument_pointer:
 checkMute: MACRO
     ld a, [mute_channels]
     bit \1, a
-    jp nz, \2
+    jr nz, \2
 ENDM
 
 _hUGE_dosound_banked::
@@ -1557,7 +1557,7 @@ _addr = _addr + 1
     loadShort pattern4, b, c
     call _load_note_data
     cp LAST_NOTE
-    jp nc, .done_macro
+    jr nc, .done_macro
     ld h, a
 
     load_de_ind noise_instruments
@@ -1566,7 +1566,7 @@ _addr = _addr + 1
 
     ld a, [tick]
     cp 7
-    jp nc, .done_macro
+    jr nc, .done_macro
 
     inc de
     push de
