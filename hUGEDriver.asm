@@ -63,8 +63,6 @@ ENDM
 
 ;; Maximum pattern length
 PATTERN_LENGTH EQU 64
-;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 3
 
 SECTION "Playback variables", WRAM0
 _start_vars:
@@ -299,7 +297,6 @@ _refresh_patterns:
     call .load_pattern
 
     ld hl, order4
-    jr .load_pattern
 
 .load_pattern:
     ld a, [hl+]
@@ -1266,7 +1263,6 @@ loadShort: MACRO
     ld \2, a
 ENDM
 
-;; TODO: Find some way to de-duplicate this code!
 _setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1279,7 +1275,7 @@ _setup_instrument_pointer:
 
     dec a ; Instrument 0 is "no instrument"
 .finish:
-    ;; Shift left twice to multiply by 4
+    ;; Shift left thrice to multiply by 4
     add a
     add a
     add a
@@ -1304,6 +1300,10 @@ load_macro:
     ld [hl], a
 
     ret
+
+read_macro:
+    ;; Call with:
+    ;;
 
 checkMute: MACRO
     ld a, [mute_channels]
@@ -1594,40 +1594,7 @@ _addr = _addr + 1
 
     loadShort pattern4, b, c
     call _load_note_data
-    cp LAST_NOTE
-    jp nc, .done_macro
-    ld h, a
 
-    load_de_ind noise_instruments
-    call _setup_instrument_pointer
-    jr z, .done_macro ; No instrument, thus no macro
-
-    ld a, [tick]
-    cp 7
-    jp nc, .done_macro
-
-    inc de
-    push de
-    push de
-
-    add_a_to_de
-    ld a, [de]
-    add h
-    call _convert_ch4_note
-    ld d, a
-    pop hl
-    ld a, [hl]
-    and %10000000
-    swap a
-    or d
-    ld [rAUD4POLY], a
-
-    pop de
-    ld a, [de]
-    and %01000000
-    ld [rAUD4GO], a
-
-.done_macro:
     ld a, c
     or a
     jr z, .after_effect4

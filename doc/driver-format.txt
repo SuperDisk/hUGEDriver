@@ -42,16 +42,24 @@ Instrument formats
 1: Sweep NR10
 2: Length NR11
 3: Envelope NR12
-4: Highmask (%xy______) where X is set if it is a trigger note
+4-5: Macro pointer
+6: Macro loop position
+7: Highmask (%xy______) where X is set if it is a trigger note
    (should always be 1) and Y is the length enabled flag
+8: Unused
 
 -=-=-Wave-=-=-
 1: Length NR31
 2: Sound level NR32
 3: Waveform number associated with this instrument
-4: Highmask as shown before
+4-5: Macro pointer
+6: Macro loop position
+7: Highmask as shown before
+8: Unused
 
 -=-=-Noise-=-=-
 1: Envelope NR42
-2: Highmask + Length combined; 1 bit for counter step, 1 bit for length enabled, followed by the length itself
-3-8: Noise macro values (offsets that are added/subtracted from the base note code)
+2-3: Macro pointer
+4: Macro loop position
+5: Highmask + Length combined; 1 bit for counter step, 1 bit for length enabled, followed by the length itself
+6-8: Unused
