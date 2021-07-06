@@ -1299,11 +1299,9 @@ load_macro:
     ENDR
 
     ;; Zero out macro index
-    xor a
-    ld [hl], a
+    ld [hl], 0
 
     ret
-
 
 checkMute: MACRO
     ld a, [mute_channels]
