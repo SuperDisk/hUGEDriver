@@ -35,7 +35,6 @@ ret_dont_call_playnote: MACRO
     jp hl
 ENDM
 
-
 add_a_ind_ret_hl: MACRO
     ld hl, \1
     add [hl]
@@ -59,6 +58,24 @@ load_de_ind: MACRO
     ld e, a
     ld a, [\1+1]
     ld d, a
+ENDM
+
+retMute: MACRO
+    bit \1, a
+    ret nz
+ENDM
+
+checkMute: MACRO
+    ld a, [mute_channels]
+    bit \1, a
+    jr nz, \2
+ENDM
+
+loadShort: MACRO
+    ld a, [\1]
+    ld \3, a
+    ld a, [\1 + 1]
+    ld \2, a
 ENDM
 
 ;; Maximum pattern length
@@ -268,9 +285,9 @@ _refresh_patterns:
 
     ;; Call with c set to what order to load
 
-    IF DEF(PREVIEW_MODE)
+IF DEF(PREVIEW_MODE)
     db $fc ; signal order update to tracker
-    ENDC
+ENDC
 
     ld hl, order1
     ld de, pattern1
@@ -407,21 +424,15 @@ _update_channel:
     ;; Channel in B
     ;; Note tone in DE
     ld c, a
-
-    dec b
-    jr z, _update_channel2
-    dec b
-    jr z, _update_channel3
-    dec b
-    jr z, _update_channel4
-
-retMute: MACRO
     ld a, [mute_channels]
-    bit \1, a
-    ret nz
-ENDM
+    dec b
+    jr z, .update_channel2
+    dec b
+    jr z, .update_channel3
+    dec b
+    jr z, .update_channel4
 
-_update_channel1:
+.update_channel1:
     retMute 0
 
     ld a, e
@@ -430,7 +441,7 @@ _update_channel1:
     or c
     ld [rAUD1HIGH], a
     ret
-_update_channel2:
+.update_channel2:
     retMute 1
 
     ld a, e
@@ -439,7 +450,7 @@ _update_channel2:
     or c
     ld [rAUD2HIGH], a
     ret
-_update_channel3:
+.update_channel3:
     retMute 2
 
     ld a, e
@@ -448,7 +459,7 @@ _update_channel3:
     or c
     ld [rAUD3HIGH], a
     ret
-_update_channel4:
+.update_channel4:
     retMute 3
 
     ld a, e
@@ -465,6 +476,7 @@ _play_note_routines:
     jr _playnote4
 
 _playnote1:
+    ld a, [mute_channels]
     retMute 0
 
     ;; Play a note on channel 1 (square wave)
@@ -483,6 +495,7 @@ _playnote1:
     ret
 
 _playnote2:
+    ld a, [mute_channels]
     retMute 1
 
     ;; Play a note on channel 2 (square wave)
@@ -501,6 +514,7 @@ _playnote2:
     ret
 
 _playnote3:
+    ld a, [mute_channels]
     retMute 2
 
     ;; This fixes a gameboy hardware quirk, apparently.
@@ -527,6 +541,7 @@ _playnote3:
     ret
 
 _playnote4:
+    ld a, [mute_channels]
     retMute 3
 
     ;; Play a "note" on channel 4 (noise)
@@ -689,6 +704,7 @@ fx_set_duty:
 
     ld a, b
     or a
+    ld a, [mute_channels]
     jr z, .chan1
 .chan2:
     retMute 1
@@ -936,13 +952,33 @@ set_channel_volume:
     ;; Correct volume value in C
     ;; Channel number in B
 
-    ld a, b
-    cp 3 ; check if it's channel 4
-    jr z, set_chn_4_vol
-    cp 1 ; check if it's channel 2
-    jr c, set_chn_1_vol
-    jr z, set_chn_2_vol
-set_chn_3_vol:
+    ld a, [mute_channels]
+    dec b
+    jr z, .set_chn_2_vol
+    dec b 
+    jr z, .set_chn_3_vol
+    dec b
+    jr z, .set_chn_4_vol
+
+.set_chn_1_vol:
+    retMute 0
+
+    ld a, [rAUD1ENV]
+    and %00001111
+    swap c
+    or c
+    ld [rAUD1ENV], a
+    ret
+.set_chn_2_vol:
+    retMute 1
+
+    ld a, [rAUD2ENV]
+    and %00001111
+    swap c
+    or c
+    ld [rAUD2ENV], a
+    ret
+.set_chn_3_vol:
     retMute 2
 
     ;; "Quantize" the more finely grained volume control down to one of 4 values.
@@ -967,25 +1003,7 @@ set_chn_3_vol:
 .done:
     ld [rAUD3LEVEL], a
     ret
-set_chn_2_vol:
-    retMute 1
-
-    ld a, [rAUD2ENV]
-    and %00001111
-    swap c
-    or c
-    ld [rAUD2ENV], a
-    ret
-set_chn_1_vol:
-    retMute 0
-
-    ld a, [rAUD1ENV]
-    and %00001111
-    swap c
-    or c
-    ld [rAUD1ENV], a
-    ret
-set_chn_4_vol:
+.set_chn_4_vol:
     retMute 3
 
     swap c
@@ -1242,13 +1260,6 @@ fx_toneporta:
     ld [hl], c
     jp _update_channel
 
-loadShort: MACRO
-    ld a, [\1]
-    ld \3, a
-    ld a, [\1 + 1]
-    ld \2, a
-ENDM
-
 ;; TODO: Find some way to de-duplicate this code!
 _setup_instrument_pointer_ch4:
     ;; Call with:
@@ -1283,12 +1294,6 @@ _setup_instrument_pointer:
 
     rla ; reset the Z flag
     ret
-
-checkMute: MACRO
-    ld a, [mute_channels]
-    bit \1, a
-    jr nz, \2
-ENDM
 
 _hUGE_dosound_banked::
 _hUGE_dosound::
@@ -1664,9 +1669,9 @@ _noreset:
     ld a, b
     ld [row], a
 
-    IF DEF(PREVIEW_MODE)
+IF DEF(PREVIEW_MODE)
     db $fd ; signal row update to tracker
-    ENDC
+ENDC
     ret
 
 note_table:
