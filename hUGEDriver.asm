@@ -1089,7 +1089,6 @@ fx_arpeggio:
 .arp_options:
     jr .set_arp1
     jr .set_arp2
-    jr .reset_arp
 .reset_arp:
     ld a, d
     jr .finish_skip_add
