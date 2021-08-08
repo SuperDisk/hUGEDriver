@@ -10,4 +10,4 @@ rgbasm -oplayer.obj -i.. -DSONG_DESCRIPTOR=ryukenden ../player.asm
 
 :: Link the objects together and run rgbfix
 rgblink -ooutput.gb player.obj hUGEDriver.obj sample_song.obj
-rgbfix -p0 -v output.gb
+rgbfix -p0 -fhg output.gb
