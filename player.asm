@@ -1,4 +1,4 @@
-include "include/HARDWARE.INC"
+include "include/hardware.inc"
 
 ; Constants
 STACK_SIZE EQU $7A

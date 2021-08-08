@@ -1,4 +1,4 @@
-include "include/HARDWARE.INC"
+include "include/hardware.inc"
 include "include/hUGE.inc"
 
 add_a_to_r16: MACRO
