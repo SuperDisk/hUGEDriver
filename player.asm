@@ -75,14 +75,12 @@ SECTION "Stack", HRAM[$FFFE - STACK_SIZE]
 ; Control starts here, but there's more ROM header several bytes later, so the
 ; only thing we can really do is immediately jump to after the header
 
-SECTION "init", ROM0[$0100]
+SECTION "Header", ROM0[$0100]
     nop
     jp $0150
 
-SECTION "nintendo_logo", ROM0[$0104]
     NINTENDO_LOGO
 
-SECTION "romname", ROM0[$0134]
 ; $0134 - $013E: The title, in upper-case letters, followed by zeroes.
 DB "HUGE"
 DS 7 ; padding
