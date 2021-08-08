@@ -8,6 +8,8 @@
 obj/
 *.htt
 *.exe
+*.bak
+
 rgbasm
 rgbfix
 rgblink
