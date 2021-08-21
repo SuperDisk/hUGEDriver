@@ -655,10 +655,6 @@ fx_call_routine:
     ;; Routines are 16 bytes. Shift left to multiply by 16, then
     ;; jump to that location.
     load_hl_ind routines
-    ld a, h
-    or l
-    ret z
-
     ld a, c
     and $0f
     add a
@@ -1247,7 +1243,7 @@ fx_toneporta:
 .done:
     pop hl
     ld a, e
-    ld [hl+], a
+    ld [hli], a
     ld [hl], d
 
     ld a, 6
