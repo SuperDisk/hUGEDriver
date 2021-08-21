@@ -829,7 +829,6 @@ fx_note_delay:
     ret_dont_call_playnote
 
 .play_note:
-    ld a, [tick]
     cp c
     ret nz ; wait until the correct tick to play the note
 
