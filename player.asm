@@ -99,7 +99,7 @@ isr_wrapper:
     push hl
     push bc
     push de
-    call _hUGE_dosound
+    call hUGE_dosound
     pop de
     pop bc
     pop hl

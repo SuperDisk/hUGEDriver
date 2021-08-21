@@ -110,8 +110,8 @@ ticks_per_row: db
 _hUGE_current_wave::
 current_wave: db
 
-;; Everything between this and `_end_vars` is zero-initialized by `hUGE_init`
-_start_vars:
+;; Everything between this and `end_zero` is zero-initialized by `hUGE_init`
+start_zero:
 
 mute_channels: db
 current_order: db
@@ -168,7 +168,7 @@ vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
 
-_end_vars:
+end_zero:
 
 SECTION "Sound Driver", ROM0
 
@@ -257,8 +257,8 @@ hUGE_init::
 
     if !DEF(PREVIEW_MODE)
     ;; Zero some ram
-    ld c, _end_vars - _start_vars
-    ld hl, _start_vars
+    ld c, end_zero - start_zero
+    ld hl, start_zero
     xor a
 .fill_loop:
     ld [hl+], a
@@ -277,9 +277,9 @@ hUGE_init::
     ld a, [current_order]
     ld c, a ;; Current order index
 
-    ;; Fall through into _refresh_patterns
+    ;; Fall through into load_patterns
 
-_refresh_patterns:
+load_patterns:
     ;; Loads pattern registers with pointers to correct pattern based on
     ;; an order index
 
@@ -316,7 +316,7 @@ ENDC
     inc de
     ret
 
-_load_note_data:
+get_current_row:
     ;; Call with:
     ;; Pattern pointer in BC
 
@@ -338,7 +338,7 @@ _load_note_data:
     ld c, [hl]
     ret
 
-_lookup_note:
+get_current_note:
     ;; Call with:
     ;; Pattern pointer in BC
     ;; channel_noteX pointer in DE
@@ -347,7 +347,7 @@ _lookup_note:
     ;; Stores instrument/effect code in B
     ;; Stores effect params in C
     ;; Stores note number in the memory pointed to by DE
-    call _load_note_data
+    call get_current_row
     ld hl, 0
 
     ;; If the note we found is greater than LAST_NOTE, then it's not a valid note
@@ -358,7 +358,7 @@ _lookup_note:
     ;; Store the loaded note value in channel_noteX
     ld [de], a
 
-_convert_note:
+get_note_period:
     ;; Call with:
     ;; Note number in A
     ;; Stores note period value in HL
@@ -376,7 +376,7 @@ _convert_note:
     scf
     ret
 
-_convert_ch4_note:
+get_note_poly:
     ;; Call with:
     ;; Note number in A
     ;; Stores polynomial counter in A
@@ -416,7 +416,7 @@ _convert_ch4_note:
     or l
     ret
 
-_update_channel:
+update_channel:
     ;; Call with:
     ;; Highmask in A
     ;; Channel in B
@@ -461,19 +461,19 @@ _update_channel:
     retMute 3
 
     ld a, e
-    call _convert_ch4_note
+    call get_note_poly
     ldh [rAUD4POLY], a
     xor a
     ldh [rAUD4GO], a
     ret
 
-_play_note_routines:
-    jr _playnote1
-    jr _playnote2
-    jr _playnote3
-    jr _playnote4
+play_note_routines:
+    jr play_ch1_note
+    jr play_ch2_note
+    jr play_ch3_note
+    jr play_ch4_note
 
-_playnote1:
+play_ch1_note:
     ld a, [mute_channels]
     retMute 0
 
@@ -492,7 +492,7 @@ _playnote1:
 
     ret
 
-_playnote2:
+play_ch2_note:
     ld a, [mute_channels]
     retMute 1
 
@@ -511,7 +511,7 @@ _playnote2:
 
     ret
 
-_playnote3:
+play_ch3_note:
     ld a, [mute_channels]
     retMute 2
 
@@ -538,7 +538,7 @@ _playnote3:
 
     ret
 
-_playnote4:
+play_ch4_note:
     ld a, [mute_channels]
     retMute 3
 
@@ -553,7 +553,7 @@ _playnote4:
 
     ret
 
-_doeffect:
+do_effect:
     ;; Call with:
     ;; B: instrument nibble + effect type nibble
     ;; C: effect parameters
@@ -601,7 +601,7 @@ _doeffect:
     dw fx_note_cut                     ;Exy
     dw fx_set_speed                    ;Fxy ; global
 
-setup_channel_pointer:
+ptr_to_channel_member:
     ;; Call with:
     ;; Channel value in B
     ;; Offset in D
@@ -803,7 +803,7 @@ fx_note_delay:
 
     ;; Just store the note into the channel period, and don't play a note.
     ld d, 0
-    call setup_channel_pointer
+    call ptr_to_channel_member
 
     ld a, [temp_note_value+1]
     ld [hl+], a
@@ -820,7 +820,7 @@ fx_note_delay:
 
 play_note:
     ld d, 0
-    call setup_channel_pointer
+    call ptr_to_channel_member
 
     ;; TODO: Change this to accept HL instead?
     ld a, [hl+]
@@ -832,9 +832,9 @@ play_note:
 
     ld a, b
     add a
-    add a, LOW(_play_note_routines)
+    add a, LOW(play_note_routines)
     ld l, a
-    adc a, HIGH(_play_note_routines)
+    adc a, HIGH(play_note_routines)
     sub l
     ld h, a
     jp hl
@@ -1017,7 +1017,7 @@ fx_vibrato:
     ;; (0x7  = 0.125)
     ;; (0xf  = 0.0625)
     ld d, 4
-    call setup_channel_pointer
+    call ptr_to_channel_member
 
     ld a, c
     and %11110000
@@ -1029,10 +1029,10 @@ fx_vibrato:
     ld a, [hl]
     jr z, .go_up
 .restore:
-    call _convert_note
+    call get_note_period
     jr .finish_vibrato
 .go_up:
-    call _convert_note
+    call get_note_period
     ld a, c
     and %00001111
     add_a_to_hl
@@ -1040,7 +1040,7 @@ fx_vibrato:
     ld d, h
     ld e, l
     xor a
-    jp _update_channel
+    jp update_channel
 
 fx_arpeggio:
     ret z
@@ -1052,7 +1052,7 @@ fx_arpeggio:
     ;; free registers: A, D, E, H, L
 
     ld d, 4
-    call setup_channel_pointer
+    call ptr_to_channel_member
     ld d, [hl]
 
     ld a, [tick]
@@ -1093,11 +1093,11 @@ fx_arpeggio:
     and %00001111
     add d
 .finish_skip_add:
-    call _convert_note
+    call get_note_period
     ld d, h
     ld e, l
     xor a
-    jp _update_channel
+    jp update_channel
 
 fx_porta_up:
     ret z
@@ -1109,7 +1109,7 @@ fx_porta_up:
     ;; free registers: A, D, E, H, L
 
     ld d, 0
-    call setup_channel_pointer
+    call ptr_to_channel_member
 
     ld a, [hl+]
     ld e, a
@@ -1124,7 +1124,7 @@ fx_porta_up:
     ld [hl], e
 
     xor a
-    jp _update_channel
+    jp update_channel
 
 fx_porta_down:
     ret z
@@ -1136,7 +1136,7 @@ fx_porta_down:
     ;; free registers: A, D, E, H, L
 
     ld d, 0
-    call setup_channel_pointer
+    call ptr_to_channel_member
 
     ld a, [hl+]
     ld e, a
@@ -1152,7 +1152,7 @@ fx_toneporta:
 
     ;; We're on tick zero, so just move the temp note value into the toneporta target.
     ld d, 2
-    call setup_channel_pointer
+    call ptr_to_channel_member
 
     ;; If the note is nonexistent, then just return
     ld a, [temp_note_value+1]
@@ -1177,7 +1177,7 @@ fx_toneporta:
     ;; free registers: A, D, E, H, L
 
     ld d, 0
-    call setup_channel_pointer
+    call ptr_to_channel_member
     push hl
 
     ld a, [hl+]
@@ -1246,10 +1246,10 @@ fx_toneporta:
     add_a_to_hl
     ld a, [hl]
     res 7, [hl]
-    jp _update_channel
+    jp update_channel
 
 ;; TODO: Find some way to de-duplicate this code!
-_setup_instrument_pointer_ch4:
+setup_instrument_pointer_ch4:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
     ;; Stores whether the instrument was real in the Z flag
@@ -1261,8 +1261,8 @@ _setup_instrument_pointer_ch4:
 
     dec a ; Instrument 0 is "no instrument"
     add a
-    jr _setup_instrument_pointer.finish
-_setup_instrument_pointer:
+    jr setup_instrument_pointer.finish
+setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
     ;; Stores whether the instrument was real in the Z flag
@@ -1285,6 +1285,7 @@ _setup_instrument_pointer:
 
 _hUGE_dosound_banked::
 _hUGE_dosound::
+hUGE_dosound::
     ld a, [tick]
     or a
     jp nz, .process_effects
@@ -1292,12 +1293,12 @@ _hUGE_dosound::
     ;; Note playback
     loadShort pattern1, b, c
     ld de, channel_note1
-    call _lookup_note
+    call get_current_note
     push af
     jr nc, .do_setvol1
 
     load_de_ind duty_instruments
-    call _setup_instrument_pointer
+    call setup_instrument_pointer
     ld a, [highmask1]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask1
@@ -1325,22 +1326,22 @@ _hUGE_dosound::
     ld [temp_note_value+1], a
 
     ld e, 0
-    call _doeffect
+    call do_effect
 
     pop af              ; 1 byte
     jr nc, .after_note1 ; 2 bytes
-    call _playnote1     ; 3 bytes
+    call play_ch1_note     ; 3 bytes
 
 .after_note1:
     ;; Note playback
     loadShort pattern2, b, c
     ld de, channel_note2
-    call _lookup_note
+    call get_current_note
     push af
     jr nc, .do_setvol2
 
     load_de_ind duty_instruments
-    call _setup_instrument_pointer
+    call setup_instrument_pointer
     ld a, [highmask2]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask2
@@ -1366,16 +1367,16 @@ _hUGE_dosound::
     ld [temp_note_value+1], a
 
     ld e, 1
-    call _doeffect
+    call do_effect
 
     pop af              ; 1 byte
     jr nc, .after_note2 ; 2 bytes
-    call _playnote2     ; 3 bytes
+    call play_ch2_note     ; 3 bytes
 
 .after_note2:
     loadShort pattern3, b, c
     ld de, channel_note3
-    call _lookup_note
+    call get_current_note
 
     ld a, h
     ld [temp_note_value], a
@@ -1387,7 +1388,7 @@ _hUGE_dosound::
     jr nc, .do_setvol3
 
     load_de_ind wave_instruments
-    call _setup_instrument_pointer
+    call setup_instrument_pointer
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask3
@@ -1432,25 +1433,25 @@ _addr = _addr + 1
 
 .do_setvol3:
     ld e, 2
-    call _doeffect
+    call do_effect
 
     pop af              ; 1 byte
     jr nc, .after_note3 ; 2 bytes
-    call _playnote3     ; 3 bytes
+    call play_ch3_note     ; 3 bytes
 
 .after_note3:
     loadShort pattern4, b, c
-    call _load_note_data
+    call get_current_row
     ld [channel_note4], a
     cp LAST_NOTE
     push af
     jr nc, .do_setvol4
 
-    call _convert_ch4_note
+    call get_note_poly
     ld [temp_note_value], a
 
     ld de, 0
-    call _setup_instrument_pointer
+    call setup_instrument_pointer
 
     ld a, [highmask4]
     res 7, a ; Turn off the "initial" flag
@@ -1485,11 +1486,11 @@ _addr = _addr + 1
 
 .do_setvol4:
     ld e, 3
-    call _doeffect
+    call do_effect
 
     pop af              ; 1 byte
     jr nc, .after_note4 ; 2 bytes
-    call _playnote4     ; 3 bytes
+    call play_ch4_note     ; 3 bytes
 
 .after_note4:
     ;; finally just update the tick/order/row values
@@ -1500,52 +1501,52 @@ _addr = _addr + 1
     checkMute 0, .after_effect1
 
     loadShort pattern1, b, c
-    call _load_note_data
+    call get_current_row
 
     ld a, c
     or a
     jr z, .after_effect1
 
     ld e, 0
-    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect1:
     checkMute 1, .after_effect2
 
     loadShort pattern2, b, c
-    call _load_note_data
+    call get_current_row
 
     ld a, c
     or a
     jr z, .after_effect2
 
     ld e, 1
-    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect2:
     checkMute 2, .after_effect3
 
     loadShort pattern3, b, c
-    call _load_note_data
+    call get_current_row
 
     ld a, c
     or a
     jr z, .after_effect3
 
     ld e, 2
-    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect3:
     checkMute 3, .after_effect4
 
     loadShort pattern4, b, c
-    call _load_note_data
+    call get_current_row
     cp LAST_NOTE
     jr nc, .done_macro
     ld h, a
 
     load_de_ind noise_instruments
-    call _setup_instrument_pointer_ch4
+    call setup_instrument_pointer_ch4
     jr z, .done_macro ; No instrument, thus no macro
 
     ld a, [tick]
@@ -1559,7 +1560,7 @@ _addr = _addr + 1
     add_a_to_de
     ld a, [de]
     add h
-    call _convert_ch4_note
+    call get_note_poly
     ld d, a
     pop hl
     ld a, [hl]
@@ -1579,7 +1580,7 @@ _addr = _addr + 1
     jr z, .after_effect4
 
     ld e, 3
-    call _doeffect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
 
 .after_effect4:
 
@@ -1595,12 +1596,12 @@ process_tick:
     inc a
 
     cp b
-    jr z, _newrow
+    jr z, .newrow
 
     ld [hl], a
     ret
 
-_newrow:
+.newrow:
     ;; Reset tick to 0
     ld [hl], 0
 
@@ -1620,12 +1621,12 @@ _newrow:
     or [hl]     ; a = [next_order], zf = ([next_order] == 0)
     ld [hl], 0
 
-    jr z, _neworder
+    jr z, .neworder
 
     dec a
     add a ; multiply order by 2 (they are words)
 
-    jr _update_current_order
+    jr .update_current_order
 
 .no_break:
     ;; Increment row.
@@ -1633,27 +1634,27 @@ _newrow:
     inc a
     ld b, a
     cp PATTERN_LENGTH
-    jr nz, _noreset
+    jr nz, .noreset
 
     ld b, 0
-_neworder:
+.neworder:
     ;; Increment order and change loaded patterns
     ld a, [order_cnt]
     ld c, a
     ld a, [current_order]
     add a, 2
     cp c
-    jr nz, _update_current_order
+    jr nz, .update_current_order
     xor a
-_update_current_order:
+.update_current_order:
     ;; Call with:
     ;; A: The order to load
     ;; B: The row for the order to start on
     ld [current_order], a
     ld c, a
-    call _refresh_patterns
+    call load_patterns
 
-_noreset:
+.noreset:
     ld a, b
     ld [row], a
 
