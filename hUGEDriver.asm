@@ -84,8 +84,6 @@ PATTERN_LENGTH EQU 64
 CHANNEL_SIZE_EXPONENT EQU 3
 
 SECTION "Playback variables", WRAM0
-_start_vars:
-
 ;; active song descriptor
 order_cnt: db
 _start_song_descriptor_pointers:
@@ -103,14 +101,19 @@ waves: dw
 _end_song_descriptor_pointers:
 
 ;; variables
-mute_channels: db
-
 pattern1: dw
 pattern2: dw
 pattern3: dw
 pattern4: dw
 
 ticks_per_row: db
+_hUGE_current_wave::
+current_wave: db
+
+;; Everything between this and `_end_vars` is zero-initialized by `hUGE_init`
+_start_vars:
+
+mute_channels: db
 current_order: db
 next_order: db
 row_break: db
@@ -119,8 +122,6 @@ temp_note_value: dw
 row: db
 tick: db
 counter: db
-_hUGE_current_wave::
-current_wave: db
 
 channels:
 ;;;;;;;;;;;
