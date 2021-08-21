@@ -235,26 +235,6 @@ continue_set_position:
     ret
     
 hUGE_init::
-    push hl
-    if !DEF(PREVIEW_MODE)
-    ;; Zero some ram
-    ld c, _end_vars - _start_vars
-    ld hl, _start_vars
-    xor a
-.fill_loop:
-    ld [hl+], a
-    dec c
-    jr nz, .fill_loop
-    ENDC
-
-    ld a, %11110000
-    ld [envelope1], a
-    ld [envelope2], a
-
-    ld a, 100
-    ld [current_wave], a
-
-    pop hl
     ld a, [hl+] ; tempo
     ld [ticks_per_row], a
 
@@ -274,6 +254,25 @@ hUGE_init::
     inc de
     dec c
     jr nz, .copy_song_descriptor_loop
+
+    if !DEF(PREVIEW_MODE)
+    ;; Zero some ram
+    ld c, _end_vars - _start_vars
+    ld hl, _start_vars
+    xor a
+.fill_loop:
+    ld [hl+], a
+    dec c
+    jr nz, .fill_loop
+    ENDC
+
+    ;; These two are zero-initialized by the loop above, so these two writes must come after
+    ld a, %11110000
+    ld [envelope1], a
+    ld [envelope2], a
+
+    ld a, 100
+    ld [current_wave], a
 
     ld a, [current_order]
     ld c, a ;; Current order index
