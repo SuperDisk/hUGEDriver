@@ -172,35 +172,6 @@ end_zero:
 
 SECTION "Sound Driver", ROM0
 
-_hUGE_init_banked::
-    ld hl, sp+2+4
-    jr continue_init
-_hUGE_init::
-    ld hl, sp+2
-continue_init:
-    push bc
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-    call hUGE_init
-    pop bc
-    ret
-
-_hUGE_mute_channel_banked::
-    ld hl, sp+3+4
-    jr continue_mute
-_hUGE_mute_channel::
-    ld hl, sp+3
-continue_mute:
-    push bc
-    ld a, [hl-]
-    and 1
-    ld c, a
-    ld b, [hl]
-    call hUGE_mute_channel
-    pop  bc
-    ret
-
 hUGE_mute_channel::
     ;; B: channel
     ;; C: enable flag
@@ -222,18 +193,6 @@ hUGE_mute_channel::
     call nz, note_cut
     ret
 
-_hUGE_set_position_banked::
-    ld hl, sp+2+4
-    jr continue_set_position
-_hUGE_set_position::
-    ld hl, sp+2
-continue_set_position:
-    push bc
-    ld c, [hl]
-    call hUGE_set_position
-    pop  bc
-    ret
-    
 hUGE_init::
     ld a, [hl+] ; tempo
     ld [ticks_per_row], a
@@ -1665,3 +1624,51 @@ ENDC
 
 note_table:
 include "include/hUGE_note_table.inc"
+
+
+IF DEF(GBDK)
+
+SECTION "hUGEDriver GBDK wrappers", ROM0
+
+_hUGE_init_banked::
+    ld hl, sp+2+4
+    jr continue_init
+_hUGE_init::
+    ld hl, sp+2
+continue_init:
+    push bc
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    call hUGE_init
+    pop bc
+    ret
+
+_hUGE_mute_channel_banked::
+    ld hl, sp+3+4
+    jr continue_mute
+_hUGE_mute_channel::
+    ld hl, sp+3
+continue_mute:
+    push bc
+    ld a, [hl-]
+    and 1
+    ld c, a
+    ld b, [hl]
+    call hUGE_mute_channel
+    pop  bc
+    ret
+
+_hUGE_set_position_banked::
+    ld hl, sp+2+4
+    jr continue_set_position
+_hUGE_set_position::
+    ld hl, sp+2
+continue_set_position:
+    push bc
+    ld c, [hl]
+    call hUGE_set_position
+    pop  bc
+    ret
+
+ENDC
