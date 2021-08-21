@@ -748,14 +748,6 @@ fx_vol_slide:
     and d
     ret nz
 
-    ld a, b
-    add a
-    ld hl, _envelope_registers
-    add_a_to_hl
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-
     ;; setup the up and down params
     ld a, c
     and %00001111
@@ -766,7 +758,15 @@ fx_vol_slide:
     ld e, a
     swap e
 
-    ld a, [hl]
+    ; There are 5 bytes between each envelope register
+    ld a, b
+    add a
+    add a
+    add b
+    add LOW(rAUD1ENV)
+    ld c, a
+
+    ldh a, [c]
     and %11110000
     swap a
     sub d
@@ -779,20 +779,16 @@ fx_vol_slide:
     ld a, $F
 .cont2:
     swap a
-    ld [hl+], a
+    ldh [c], a
 
-    inc hl
-    ld a, [hl]
+    ; Go to rAUDxGO, which is 2 bytes after
+    inc c
+    inc c
+    ldh a, [c]
     or %10000000
-    ld [hl], a
+    ldh [c], a
 
     jr play_note
-
-_envelope_registers:
-    dw rAUD1ENV
-    dw rAUD2ENV
-    dw rAUD3LEVEL
-    dw rAUD4ENV
 
 fx_note_delay:
     ;; A: tick
