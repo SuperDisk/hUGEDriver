@@ -436,37 +436,37 @@ _update_channel:
     retMute 0
 
     ld a, e
-    ld [rAUD1LOW], a
+    ldh [rAUD1LOW], a
     ld a, d
     or c
-    ld [rAUD1HIGH], a
+    ldh [rAUD1HIGH], a
     ret
 .update_channel2:
     retMute 1
 
     ld a, e
-    ld [rAUD2LOW], a
+    ldh [rAUD2LOW], a
     ld a, d
     or c
-    ld [rAUD2HIGH], a
+    ldh [rAUD2HIGH], a
     ret
 .update_channel3:
     retMute 2
 
     ld a, e
-    ld [rAUD3LOW], a
+    ldh [rAUD3LOW], a
     ld a, d
     or c
-    ld [rAUD3HIGH], a
+    ldh [rAUD3HIGH], a
     ret
 .update_channel4:
     retMute 3
 
     ld a, e
     call _convert_ch4_note
-    ld [rAUD4POLY], a
+    ldh [rAUD4POLY], a
     xor a
-    ld [rAUD4GO], a
+    ldh [rAUD4GO], a
     ret
 
 _play_note_routines:
@@ -482,7 +482,7 @@ _playnote1:
     ;; Play a note on channel 1 (square wave)
     ld a, [temp_note_value+1]
     ld [channel_period1], a
-    ld [rAUD1LOW], a
+    ldh [rAUD1LOW], a
 
     ld a, [temp_note_value]
     ld [channel_period1+1], a
@@ -490,7 +490,7 @@ _playnote1:
     ;; Get the highmask and apply it.
     ld hl, highmask1
     or [hl]
-    ld [rAUD1HIGH], a
+    ldh [rAUD1HIGH], a
 
     ret
 
@@ -501,7 +501,7 @@ _playnote2:
     ;; Play a note on channel 2 (square wave)
     ld a, [temp_note_value+1]
     ld [channel_period2], a
-    ld [rAUD2LOW], a
+    ldh [rAUD2LOW], a
 
     ld a, [temp_note_value]
     ld [channel_period2+1], a
@@ -509,7 +509,7 @@ _playnote2:
     ;; Get the highmask and apply it.
     ld hl, highmask2
     or [hl]
-    ld [rAUD2HIGH], a
+    ldh [rAUD2HIGH], a
 
     ret
 
@@ -521,14 +521,14 @@ _playnote3:
     ;; The problem is emulated accurately in BGB.
     ;; https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
     xor a
-    ld [rAUD3ENA], a
+    ldh [rAUD3ENA], a
     cpl
-    ld [rAUD3ENA], a
+    ldh [rAUD3ENA], a
 
     ;; Play a note on channel 3 (waveform)
     ld a, [temp_note_value+1]
     ld [channel_period3], a
-    ld [rAUD3LOW], a
+    ldh [rAUD3LOW], a
 
     ld a, [temp_note_value]
     ld [channel_period3+1], a
@@ -536,7 +536,7 @@ _playnote3:
     ;; Get the highmask and apply it.
     ld hl, highmask3
     or [hl]
-    ld [rAUD3HIGH], a
+    ldh [rAUD3HIGH], a
 
     ret
 
@@ -547,11 +547,11 @@ _playnote4:
     ;; Play a "note" on channel 4 (noise)
     ld a, [temp_note_value]
     ld [channel_period4+1], a
-    ld [rAUD4POLY], a
+    ldh [rAUD4POLY], a
 
     ;; Get the highmask and apply it.
     ld a, [highmask4]
-    ld [rAUD4GO], a
+    ldh [rAUD4GO], a
 
     ret
 
@@ -632,7 +632,7 @@ fx_set_master_volume:
     ;; if you pan it completely.
 
     ld a, c
-    ld [rAUDVOL], a
+    ldh [rAUDVOL], a
     ret
 
 fx_call_routine:
@@ -684,7 +684,7 @@ fx_set_pan:
     ;; of bit shifting manually.
 
     ld a, c
-    ld [rAUDTERM], a
+    ldh [rAUDTERM], a
     ret
 
 fx_set_duty:
@@ -709,12 +709,12 @@ fx_set_duty:
 .chan2:
     retMute 1
     ld a, c
-    ld [rAUD2LEN], a
+    ldh [rAUD2LEN], a
     ret
 .chan1:
     retMute 0
     ld a, c
-    ld [rAUD1LEN], a
+    ldh [rAUD1LEN], a
     ret
 
 fx_vol_slide:
@@ -963,20 +963,20 @@ set_channel_volume:
 .set_chn_1_vol:
     retMute 0
 
-    ld a, [rAUD1ENV]
+    ldh a, [rAUD1ENV]
     and %00001111
     swap c
     or c
-    ld [rAUD1ENV], a
+    ldh [rAUD1ENV], a
     ret
 .set_chn_2_vol:
     retMute 1
 
-    ld a, [rAUD2ENV]
+    ldh a, [rAUD2ENV]
     and %00001111
     swap c
     or c
-    ld [rAUD2ENV], a
+    ldh [rAUD2ENV], a
     ret
 .set_chn_3_vol:
     retMute 2
@@ -1001,14 +1001,14 @@ set_channel_volume:
 .zero:
     xor a
 .done:
-    ld [rAUD3LEVEL], a
+    ldh [rAUD3LEVEL], a
     ret
 .set_chn_4_vol:
     retMute 3
 
     swap c
     ld a, c
-    ld [rAUD4ENV], a
+    ldh [rAUD4ENV], a
     ret
 
 fx_vibrato:
@@ -1317,12 +1317,12 @@ _hUGE_dosound::
 
     ld a, [de]
     inc de
-    ld [rAUD1SWEEP], a
+    ldh [rAUD1SWEEP], a
     ld a, [de]
     inc de
-    ld [rAUD1LEN], a
+    ldh [rAUD1LEN], a
     ld a, [de]
-    ld [rAUD1ENV], a
+    ldh [rAUD1ENV], a
     inc de
     ld a, [de]
 
@@ -1361,9 +1361,9 @@ _hUGE_dosound::
     inc de
     ld a, [de]
     inc de
-    ld [rAUD2LEN], a
+    ldh [rAUD2LEN], a
     ld a, [de]
-    ld [rAUD2ENV], a
+    ldh [rAUD2ENV], a
     inc de
     ld a, [de]
 
@@ -1407,10 +1407,10 @@ _hUGE_dosound::
 
     ld a, [de]
     inc de
-    ld [rAUD3LEN], a
+    ldh [rAUD3LEN], a
     ld a, [de]
     inc de
-    ld [rAUD3LEVEL], a
+    ldh [rAUD3LEVEL], a
     ld a, [de]
     inc de
 
@@ -1423,7 +1423,7 @@ _hUGE_dosound::
     add_a_ind_ret_hl waves
 
     xor a
-    ld [rAUD3ENA], a
+    ldh [rAUD3ENA], a
 
 _addr = _AUD3WAVERAM
     REPT 16
@@ -1433,7 +1433,7 @@ _addr = _addr + 1
     ENDR
 
     ld a, %10000000
-    ld [rAUD3ENA], a
+    ldh [rAUD3ENA], a
 
 .no_wave_copy:
     ld a, [de]
@@ -1474,11 +1474,11 @@ _addr = _addr + 1
     add hl, de
 
     ld a, [hl+]
-    ld [rAUD4ENV], a
+    ldh [rAUD4ENV], a
 
     ld a, [hl]
     and %00111111
-    ld [rAUD4LEN], a
+    ldh [rAUD4LEN], a
 
     ld a, [temp_note_value]
     ld d, a
@@ -1577,12 +1577,12 @@ _addr = _addr + 1
     and %10000000
     swap a
     or d
-    ld [rAUD4POLY], a
+    ldh [rAUD4POLY], a
 
     pop de
     ld a, [de]
     and %01000000
-    ld [rAUD4GO], a
+    ldh [rAUD4GO], a
 
 .done_macro:
     ld a, c
