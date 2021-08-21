@@ -329,17 +329,13 @@ _load_note_data:
     add h
     add h
 
-    add 2
     ld h, 0
     ld l, a
     add hl, bc ; HL now points at the 3rd byte of the note
-    ld a, [hl-]
-    ld c, a
-    ld a, [hl-]
-    ld b, a
-
-    ld a, [hl]
-
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
     ret
 
 _lookup_note:
