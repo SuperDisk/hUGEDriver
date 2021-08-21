@@ -748,13 +748,6 @@ fx_vol_slide:
     and d
     ret nz
 
-    ld d, 0
-    call setup_channel_pointer
-    ld a, [hl+]
-    ld [temp_note_value+1], a
-    ld a, [hl]
-    ld [temp_note_value], a
-
     ld a, b
     add a
     ld hl, _envelope_registers
@@ -793,11 +786,7 @@ fx_vol_slide:
     or %10000000
     ld [hl], a
 
-    ld hl, _play_note_routines
-    ld a, b
-    add a
-    add_a_to_hl
-    jp hl
+    jr play_note
 
 _envelope_registers:
     dw rAUD1ENV
@@ -819,9 +808,9 @@ fx_note_delay:
     ld d, 0
     call setup_channel_pointer
 
-    ld a, [temp_note_value]
-    ld [hl+], a
     ld a, [temp_note_value+1]
+    ld [hl+], a
+    ld a, [temp_note_value]
     ld [hl], a
 
     ;; Don't call _playnote. This is done by grabbing the return
@@ -832,14 +821,15 @@ fx_note_delay:
     cp c
     ret nz ; wait until the correct tick to play the note
 
+play_note:
     ld d, 0
     call setup_channel_pointer
 
     ;; TODO: Change this to accept HL instead?
     ld a, [hl+]
-    ld [temp_note_value], a
-    ld a, [hl]
     ld [temp_note_value+1], a
+    ld a, [hl]
+    ld [temp_note_value], a
 
     ;; TODO: Generalize this somehow?
 
