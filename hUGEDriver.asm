@@ -368,12 +368,14 @@ _convert_note:
     ;; Stores note period value in HL
 
     add a ;; double it to get index into hi/lo table
-
-    ld hl, note_table
-    add_a_to_hl
-    ld     a, [hl+]
-    ld     h, [hl]
-    ld     l, a
+    add a, LOW(note_table)
+    ld l, a
+    adc a, HIGH(note_table)
+    sub l
+    ld h, a
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
 
     scf
     ret
@@ -569,8 +571,11 @@ _doeffect:
     ;; Multiply by 2 to get offset into table
     add a, a
 
-    ld hl, .jump
-    add_a_to_hl
+    add a, LOW(.jump)
+    ld l, a
+    adc a, HIGH(.jump)
+    sub l
+    ld h, a
     
     ld a, [hl+]
     ld h, [hl]
@@ -612,7 +617,11 @@ setup_channel_pointer:
     ENDR
     add d
     ld hl, channels
-    add_a_to_hl
+    add a, LOW(channels)
+    ld l, a
+    adc a, HIGH(channels)
+    sub l
+    ld h, a
     ret
 
 fx_set_master_volume:
@@ -829,10 +838,13 @@ play_note:
 
     ;; TODO: Generalize this somehow?
 
-    ld hl, _play_note_routines
     ld a, b
     add a
-    add_a_to_hl
+    add a, LOW(_play_note_routines)
+    ld l, a
+    adc a, HIGH(_play_note_routines)
+    sub l
+    ld h, a
     jp hl
 
 fx_set_speed:
@@ -1049,11 +1061,12 @@ fx_arpeggio:
 
     ld d, 4
     call setup_channel_pointer
+    ld d, [hl]
 
     ld a, [tick]
     dec a
 
-    ;; A crappy modulo, because it's not a multiple of four :(
+    ;; TODO: A crappy modulo, because it's not a multiple of four :(
 
     jr .test_greater_than_two
 .greater_than_two:
@@ -1065,10 +1078,11 @@ fx_arpeggio:
     ;; Multiply by 2 to get offset into table
     add a
 
-    ld d, [hl]
-
-    ld hl, .arp_options
-    add_a_to_hl
+    add a, LOW(.arp_options)
+    ld l, a
+    adc a, HIGH(.arp_options)
+    sub l
+    ld h, a
     jp hl
 
 .arp_options:
@@ -1232,16 +1246,14 @@ fx_toneporta:
     ld e, l
 .done:
     pop hl
-    ld [hl], e
-    inc hl
+    ld a, e
+    ld [hl+], a
     ld [hl], d
 
     ld a, 6
     add_a_to_hl
     ld a, [hl]
-    ld c, a
-    res 7, c
-    ld [hl], c
+    res 7, [hl]
     jp _update_channel
 
 ;; TODO: Find some way to de-duplicate this code!
