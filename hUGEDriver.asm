@@ -607,12 +607,14 @@ fx_call_routine:
 
     ;; free registers: A, D, E, H, L
 
-    ;; Routines are 16 bytes. Shift left to multiply by 16, then
-    ;; jump to that location.
-    load_hl_ind routines
-    ld a, c
-    add a
-    add_a_to_hl
+    sla c
+    ld a, [routines]
+    add a, c
+    ld l, a
+    ld a, [routines+1]
+    adc a, 0
+    ld h, a
+
     ld a, [hl+]
     ld h, [hl]
     ld l, a
