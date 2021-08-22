@@ -698,7 +698,7 @@ fx_set_duty:
 
 ;;; Processes effect A, "volume slide".
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = FX param
+;;; Param: C = FX param; either nibble should be 0, otherwise weird (unspecified) behavior may arise
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF C DE HL
 fx_vol_slide:
@@ -769,7 +769,8 @@ fx_vol_slide:
 
 ;;; Processes effect 7, "note delay".
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = FX param
+;;; Param: C = Amount of ticks by which to delay the note
+;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF D HL
 fx_note_delay:
