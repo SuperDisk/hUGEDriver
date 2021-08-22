@@ -1,16 +1,17 @@
 ![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
----
+===
 
-This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker.](https://github.com/SuperDisk/hUGETracker/)
+This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker](https://github.com/SuperDisk/hUGETracker).
 
 If you want help using the tracker, driver, or just want to chat, join the [hUGETracker Discord server!](https://discord.gg/abbHjEj5WH)
 
-# Quick start (RGBDS)
+## Quick start (RGBDS)
+
 1. Export your song in "RGBDS .asm" format in hUGETracker.
 2. Choose a *song descriptor* name. This is what you will refer to the song as in your code. It must be a valid RGBDS symbol.
 3. Place the exported `.asm` file in your RGBDS project.
 4. Load `hl` with your song descriptor name, and `call hUGE_init`
-5. In your game's main loop or in a VBlank interrupt, `call _hUGE_dosound`
+5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
 6. When assembling your game, be sure to specify your music file and hUGEDriver.asm in your call to `rgbasm`/`rgblink`!
 
 Be sure to enable sound playback before you start!
@@ -26,7 +27,8 @@ ld [rAUDVOL], a
 
 See the `rgbds_example` directory for a working example!
 
-# Quick start (GBDK)
+## Quick start (GBDK)
+
 1. Export your song in "GBDK .c" format in hUGETracker.
 2. Choose a *song descriptor* name. This is what you will refer to the song as in your code. It must be a valid C variable name.
 3. Place the exported .C file in your GBDK project.
@@ -48,7 +50,7 @@ See `gbdk_example/gbdk_player_example.c` for a working example!
 
 Note: hUGEDriver is assembled by RGBDS into a `.obj` file, and then is converted to GBDK's format using `rgb2sdas` (in the `gbdk_example` folder). Be sure to assemble and link this object with your game (check `gbdk_example/build.bat` for the steps).
 
-# Usage
+## Usage
 
 This driver is suitable for use in homebrew games. hUGETracker exports data representing the various components of a song, as well as a *song descriptor* which is a small block of pointers that tell the driver how to initialize and play a song.
 
@@ -60,7 +62,7 @@ ld hl, SONG_DESCRIPTOR
 call hUGE_init
 
 ;; Repeatedly
-call _hUGE_dosound
+call hUGE_dosound
 ```
 
 In C:
@@ -76,7 +78,7 @@ __critical {
 
 Check out `player.asm` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
 
-# Files in this repo
+## Files in this repo
 
 | File                      | Explanation                                                                                                         |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------|
@@ -89,6 +91,6 @@ Check out `player.asm` for a full fledged example of how to use the driver in an
 | include/music.inc         | A table that maps the note constants (byte size) to periods that can be fed into the hardware registers (word size) |
 | doc/driver-format.txt     | A text file explaining the layout of parts of the driver, and what formats are expected by certain routines.        |
 
-# License
+## License
 
 hUGETracker and hUGEDriver are dedicated to the public domain.
