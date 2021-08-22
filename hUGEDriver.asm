@@ -890,14 +890,14 @@ note_cut:
     add a, LOW(rAUD1ENV)
     ld l, a
     ld h, HIGH(rAUD1ENV)
-    ld [hl], 0
+    xor a
+    ld [hl+], a
     ld a, b
     cp 2
     ret z ; return early if CH3-- no need to retrigger note
 
     ;; Retrigger note
     inc l ; Not `inc hl` because H stays constant (= $FF)
-    inc l
     ld [hl], $FF
     ret
 
