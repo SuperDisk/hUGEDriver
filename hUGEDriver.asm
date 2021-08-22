@@ -1374,12 +1374,10 @@ hUGE_dosound::
     xor a
     ldh [rAUD3ENA], a
 
-_addr = _AUD3WAVERAM
-    REPT 16
-        ld a, [hl+]
-        ldh [_addr], a
-_addr = _addr + 1
-    ENDR
+FOR OFS, 16
+    ld a, [hl+]
+    ldh [_AUD3WAVERAM + OFS], a
+ENDR
 
     ld a, %10000000
     ldh [rAUD3ENA], a
