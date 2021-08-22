@@ -84,31 +84,40 @@ PATTERN_LENGTH EQU 64
 CHANNEL_SIZE_EXPONENT EQU 3
 
 SECTION "Playback variables", WRAM0
-;; active song descriptor
+;; Active song descriptor
 order_cnt: db
 _start_song_descriptor_pointers:
+;; Pointers to the song's current four orders (one per channel)
 order1: dw
 order2: dw
 order3: dw
 order4: dw
 
+;; Pointers to the instrument tables
 duty_instruments: dw
 wave_instruments: dw
 noise_instruments: dw
 
+;; Misc. pointers
 routines: dw
 waves: dw
 _end_song_descriptor_pointers:
 
-;; variables
+;; Pointers to the current patterns (sort of a cache)
 pattern1: dw
 pattern2: dw
 pattern3: dw
 pattern4: dw
 
+;; How long a row lasts in ticks (1 = one row per call to `hUGE_dosound`, etc. 0 translates to 256)
 ticks_per_row: db
+
 _hUGE_current_wave::
+hUGE_current_wave::
+;; ID of the wave currently loaded into wave RAM
 current_wave: db
+hUGE_NO_WAVE equ 100
+    EXPORT hUGE_NO_WAVE
 
 ;; Everything between this and `end_zero` is zero-initialized by `hUGE_init`
 start_zero:
@@ -172,27 +181,10 @@ end_zero:
 
 SECTION "Sound Driver", ROM0
 
-hUGE_mute_channel::
-    ;; B: channel
-    ;; C: enable flag
-    ld e, $fe
-    ld a, b
-    or a
-    jr z, .enable_cut
-.enable_loop:
-    sla c
-    rlc e
-    dec a
-    jr nz, .enable_loop
-.enable_cut:
-    ld a, [mute_channels]
-    and e
-    or  c
-    ld [mute_channels], a
-    and c
-    call nz, note_cut
-    ret
-
+;;; Sets up hUGEDriver to play a song.
+;;; !!! BE SURE THAT `hUGE_dosound` WILL NOT BE CALLED WHILE THIS RUNS !!!
+;;; Param: HL = Pointer to the "song descriptor" you wish to load (typically exported by hUGETracker).
+;;; Destroys: AF C DE HL
 hUGE_init::
     ld a, [hl+] ; tempo
     ld [ticks_per_row], a
@@ -214,7 +206,7 @@ hUGE_init::
     dec c
     jr nz, .copy_song_descriptor_loop
 
-    if !DEF(PREVIEW_MODE)
+IF !DEF(PREVIEW_MODE)
     ;; Zero some ram
     ld c, end_zero - start_zero
     ld hl, start_zero
@@ -223,27 +215,24 @@ hUGE_init::
     ld [hl+], a
     dec c
     jr nz, .fill_loop
-    ENDC
+ENDC
 
     ;; These two are zero-initialized by the loop above, so these two writes must come after
     ld a, %11110000
     ld [envelope1], a
     ld [envelope2], a
 
-    ld a, 100
+    ;; Force loading the next wave
+    ld a, hUGE_NO_WAVE
     ld [current_wave], a
 
-    ld a, [current_order]
-    ld c, a ;; Current order index
+    ld c, 0
+    ;; fallthrough (load the pattern pointers)
 
-    ;; Fall through into load_patterns
-
+;;; Sets all 4 pattern pointers from a certain index in the respective 4 orders.
+;;; Param: C = The index (in increments of 2)
+;;; Destroy: AF DE HL
 load_patterns:
-    ;; Loads pattern registers with pointers to correct pattern based on
-    ;; an order index
-
-    ;; Call with c set to what order to load
-
 IF DEF(PREVIEW_MODE)
     db $fc ; signal order update to tracker
 ENDC
@@ -259,6 +248,7 @@ ENDC
     call .load_pattern
 
     ld hl, order4
+    ;; fallthrough
 
 .load_pattern:
     ld a, [hl+]
@@ -275,13 +265,42 @@ ENDC
     inc de
     ret
 
-get_current_row:
-    ;; Call with:
-    ;; Pattern pointer in BC
 
-    ;; Stores instrument/effect code in B
-    ;; Stores effect params in C
-    ;; Stores note number in A
+;;; Sets a channel's muting status.
+;;; Muted channels are left entirely alone by the driver, so that you can repurpose them,
+;;; for example for sound effects, CH3 sample playback, etc.
+;;; If muting the channel, the note being played will be cut.
+;;; Param: B = Which channel to enable; 0 for CH1, 1 for CH2, etc.
+;;; Param: C = 0 to unmute the channel, 1 to mute it
+;;; Destroy: A C E HL
+hUGE_mute_channel::
+    ld e, $fe
+    ld a, b
+    or a
+    jr z, .enable_cut
+.enable_loop:
+    sla c
+    rlc e
+    dec a
+    jr nz, .enable_loop
+.enable_cut:
+    ld a, [mute_channels]
+    and e
+    or  c
+    ld [mute_channels], a
+    and c
+    jp nz, note_cut
+    ret
+
+
+;;; Reads a pattern's current row.
+;;; Param: BC = Pointer to the pattern
+;;; Param: [row] = Index of the current ro<
+;;; Return: A = Note ID
+;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
+;;; Return: C = Effect parameter
+;;; Destroy: HL
+get_current_row:
     ld a, [row]
     ld h, a
     ;; Multiply by 3 for the note value
@@ -297,15 +316,17 @@ get_current_row:
     ld c, [hl]
     ret
 
+;;; Gets the "period" of a pattern's current note.
+;;; Param: BC = Pointer to the pattern
+;;; Param: [row] = Index of the current row
+;;; Param: DE = Location to write the note's index to, if applicable
+;;; Return: HL = Note's period
+;;; Return: CF = Set if and only if a "valid" note (i.e. not a "rest")
+;;; Return: [DE] = Note's ID, not updated if a "rest"
+;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
+;;; Return: C = Effect parameter
+;;; Destroy: AF
 get_current_note:
-    ;; Call with:
-    ;; Pattern pointer in BC
-    ;; channel_noteX pointer in DE
-
-    ;; Stores note period value in HL
-    ;; Stores instrument/effect code in B
-    ;; Stores effect params in C
-    ;; Stores note number in the memory pointed to by DE
     call get_current_row
     ld hl, 0
 
@@ -317,11 +338,12 @@ get_current_note:
     ;; Store the loaded note value in channel_noteX
     ld [de], a
 
+;;; Gets a note's "period", i.e. what should be written to NRx3 and NRx4.
+;;; Param: A = Note ID
+;;; Return: HL = Note's period
+;;; Return: CF = 1
+;;; Destroy: AF
 get_note_period:
-    ;; Call with:
-    ;; Note number in A
-    ;; Stores note period value in HL
-
     add a ;; double it to get index into hi/lo table
     add a, LOW(note_table)
     ld l, a
@@ -335,12 +357,11 @@ get_note_period:
     scf
     ret
 
+;;; Gets a note's "polynomial counter", i.e. what should be written to NR44.
+;;; Param: A = Note ID
+;;; Return: A = Note's poly
+;;; Destroy: F HL
 get_note_poly:
-    ;; Call with:
-    ;; Note number in A
-    ;; Stores polynomial counter in A
-    ;; Free: HL
-
     ;; Invert the order of the numbers
     add 192 ; (255 - 63)
     cpl
@@ -375,11 +396,35 @@ get_note_poly:
     or l
     ret
 
+
+;;; Computes the pointer to a member of a channel.
+;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
+;;; Param: D = Offset within the channel struct
+;;; Return: HL = Pointer to the channel's member
+;;; Destroy: AF
+ptr_to_channel_member:
+    ld a, b
+REPT CHANNEL_SIZE_EXPONENT
+    add a
+ENDR
+    add d
+    ld hl, channels
+    add a, LOW(channels)
+    ld l, a
+    adc a, HIGH(channels)
+    sub l
+    ld h, a
+    ret
+
+
+;;; Ticks a channel.
+;;; Param: B = Which channel to update (0 = CH1, 1 = CH2, etc.)
+;;; Param: (ignored for CH4) A = ORed to the value written to NRx4
+;;; Param: (for CH4) E = Note ID
+;;; Param: (otherwise) DE = Note period
+;;; Destroy: AF B
+;;; Destroy: (for CH4) HL
 update_channel:
-    ;; Call with:
-    ;; Highmask in A
-    ;; Channel in B
-    ;; Note tone in DE
     ld c, a
     ld a, [mute_channels]
     dec b
@@ -425,6 +470,7 @@ update_channel:
     xor a
     ldh [rAUD4GO], a
     ret
+
 
 play_note_routines:
     jr play_ch1_note
@@ -512,14 +558,13 @@ play_ch4_note:
 
     ret
 
+
+;;; Performs an effect on a given channel.
+;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: B = Effect type (upper 4 bits ignored)
+;;; Param: C = Effect parameters (depend on FX type)
+;;; Destroy: AF BC DE HL
 do_effect:
-    ;; Call with:
-    ;; B: instrument nibble + effect type nibble
-    ;; C: effect parameters
-    ;; E: channel
-
-    ;; free: A, D, H, L
-
     ;; Strip the instrument bits off leaving only effect code
     ld a, b
     and %00001111
@@ -531,7 +576,7 @@ do_effect:
     adc a, HIGH(.jump)
     sub l
     ld h, a
-    
+
     ld a, [hl+]
     ld h, [hl]
     ld l, a
@@ -551,7 +596,7 @@ do_effect:
     dw fx_set_master_volume            ;5xy ; global
     dw fx_call_routine                 ;6xy
     dw fx_note_delay                   ;7xy
-    dw fx_set_pan                      ;8xy
+    dw fx_set_pan                      ;8xy ; global
     dw fx_set_duty                     ;9xy
     dw fx_vol_slide                    ;Axy
     dw fx_pos_jump                     ;Bxy ; global
@@ -560,53 +605,26 @@ do_effect:
     dw fx_note_cut                     ;Exy
     dw fx_set_speed                    ;Fxy ; global
 
-ptr_to_channel_member:
-    ;; Call with:
-    ;; Channel value in B
-    ;; Offset in D
-    ;; Returns value in HL
 
-    ld a, b
-    REPT CHANNEL_SIZE_EXPONENT
-        add a
-    ENDR
-    add d
-    ld hl, channels
-    add a, LOW(channels)
-    ld l, a
-    adc a, HIGH(channels)
-    sub l
-    ld h, a
-    ret
-
+;;; Processes (global) effect 5, "set master volume".
+;;; Param: C = Value to write to NR50
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A
 fx_set_master_volume:
     ret nz
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
-    ;; Upper 4 bits contain volume for left, lower 4 bits for right
-    ;; Format is ?LLL ?RRR where ? is just a random bit, since we don't use
-    ;; the Vin
-
-    ;; This can be used as a more fine grained control over channel 3's output,
-    ;; if you pan it completely.
 
     ld a, c
     ldh [rAUDVOL], a
     ret
 
+
+;;; Processes effect 6, "call routine".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Routine ID
+;;; Param: A = Current tick
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: Anything the routine does
 fx_call_routine:
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
     sla c
     ld a, [routines]
     add a, c
@@ -634,32 +652,28 @@ ENDC
     jp hl
 
 
+;;; Processes (global) effect 8, "set pan".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Value to write to NR51
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A
 fx_set_pan:
     ret nz
 
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
     ;; Pretty simple. The editor can create the correct value here without a bunch
     ;; of bit shifting manually.
-
     ld a, c
     ldh [rAUDTERM], a
     ret
 
+
+;;; Processes effect 9, "set duty cycle".
+;;; Param: B = Current channel ID (0 = CH1, anything else = CH2)
+;;; Param: C = Value to write to NRx1
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF
 fx_set_duty:
     ret nz
-
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
 
     ;; $900 = 12.5%
     ;; $940 = 25%
@@ -681,6 +695,12 @@ fx_set_duty:
     ldh [rAUD1LEN], a
     ret
 
+
+;;; Processes effect A, "volume slide".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = FX param
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF C DE HL
 fx_vol_slide:
     ret nz
 
@@ -689,15 +709,7 @@ fx_vol_slide:
     ;; Might replace this effect with something different if a new effect is
     ;; ever needed.
 
-
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
-    ;; Todo
+    ;; TODO: use calc84maniac's `daa` method instead
     ;; check channel mute
     ld d, 1
     ld a, b
@@ -754,14 +766,13 @@ fx_vol_slide:
 
     jr play_note
 
+
+;;; Processes effect 7, "note delay".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = FX param
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF D HL
 fx_note_delay:
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
     jr nz, .play_note
 
     ;; Just store the note into the channel period, and don't play a note.
@@ -781,6 +792,12 @@ fx_note_delay:
     cp c
     ret nz ; wait until the correct tick to play the note
 
+    ;; fallthrough
+
+
+;;; Plays a channel's current note.
+;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
+;;; Destroy: AF D HL
 play_note:
     ld d, 0
     call ptr_to_channel_member
@@ -791,8 +808,6 @@ play_note:
     ld a, [hl]
     ld [temp_note_value], a
 
-    ;; TODO: Generalize this somehow?
-
     ld a, b
     add a
     add a, LOW(play_note_routines)
@@ -802,58 +817,50 @@ play_note:
     ld h, a
     jp hl
 
+
+;;; Processes (global) effect F, "set speed".
+;;; Param: C = New amount of ticks per row
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A
 fx_set_speed:
     ret nz
 
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
     ld a, c
     ld [ticks_per_row], a
     ret
 
+
 hUGE_set_position::
+;;; Processes (global) effect B, "position jump".
+;;; Param: C = ID of the order to jump to
+;;; Destroy: A
 fx_pos_jump:
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
     ld a, 1
     ld [row_break], a
     ld a, c
     ld [next_order], a
-
     ret
 
+
+;;; Processes (global) effect D, "pattern break".
+;;; Param: C = ID of the next order's row to start on
+;;; Destroy: A
 fx_pattern_break:
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
     ld a, c
     ld [row_break], a
-
     ret
 
-fx_note_cut:
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
 
-    ;; free registers: A, D, E, H, L
+;;; Processes effect E, "note cut".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Tick to cut the note on (TODO: what does cutting on tick 0 do?)
+;;; Param: A = Current tick
+;;; Destroy: A
+fx_note_cut:
     cp c
     ret nz
 
+    ;; TODO: use calc84maniac's method instead
     ;; check channel mute
     ld d, 1
     ld a, b
@@ -868,47 +875,45 @@ fx_note_cut:
     and d
     ret nz
 
+    ;; fallthrough
+
+
+;;; Cuts note on a channel.
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Destroy: AF HL
 note_cut:
-    ld hl, rAUD1ENV
     ld a, b
     add a
     add a
     add b ; multiply by 5
-    add_a_to_hl
+    add a, LOW(rAUD1ENV)
+    ld l, a
+    ld h, HIGH(rAUD1ENV)
     ld [hl], 0
     ld a, b
     cp 2
     ret z ; return early if CH3-- no need to retrigger note
 
     ;; Retrigger note
-    inc hl
-    inc hl
-    ld [hl], %11111111
+    inc l ; Not `inc hl` because H stays constant (= $FF)
+    inc l
+    ld [hl], $FF
     ret
 
+
+;;; Processes effect C, "set volume".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Volume to set the channel to
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF BC
 fx_set_volume:
-    ret nz ;; Return if we're not on tick zero.
-
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
-    ;; Arguments to this effect will be massaged to correct form for the channel
-    ;; in the editor so we don't have to AND and SWAP and stuff.
-
-set_channel_volume:
-    ;; Call with:
-    ;; Correct volume value in C
-    ;; Channel number in B
+    ret nz ; Return if we're not on tick zero.
 
     swap c
     ld a, [mute_channels]
     dec b
     jr z, .set_chn_2_vol
-    dec b 
+    dec b
     jr z, .set_chn_3_vol
     dec b
     jr z, .set_chn_4_vol
@@ -961,14 +966,14 @@ set_channel_volume:
     ldh [rAUD4ENV], a
     ret
 
+
+;;; Processes effect 4, "vibrato".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = FX param
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF B DE HL
 fx_vibrato:
     ret z
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
 
     ;; Extremely poor man's vibrato.
     ;; Speed values:
@@ -1003,14 +1008,14 @@ fx_vibrato:
     xor a
     jp update_channel
 
+
+;;; Processes effect 8, "arpeggio".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Offsets in semitones (each nibble)
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF B DE HL
 fx_arpeggio:
     ret z
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
 
     ld d, 4
     call ptr_to_channel_member
@@ -1041,13 +1046,17 @@ fx_arpeggio:
 .arp_options:
     jr .set_arp1
     jr .set_arp2
+    ;; No `jr .reset_arp`
+
 .reset_arp:
     ld a, d
     jr .finish_skip_add
+
 .set_arp2:
     ld a, c
     swap a
-    jr .finish_arp
+    db $FE ; cp <imm8> gobbles next byte
+
 .set_arp1:
     ld a, c
 .finish_arp:
@@ -1060,14 +1069,14 @@ fx_arpeggio:
     xor a
     jp update_channel
 
+
+;;; Processes effect 1, "portamento up".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = How many units to slide the pitch by per tick
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A B DE HL
 fx_porta_up:
     ret z
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
 
     ld d, 0
     call ptr_to_channel_member
@@ -1087,14 +1096,14 @@ fx_porta_up:
     xor a
     jp update_channel
 
+
+;;; Processes (global) effect 2, "portamento down".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = How many units to slide the pitch down by per tick
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A B DE HL
 fx_porta_down:
     ret z
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
 
     ld d, 0
     call ptr_to_channel_member
@@ -1103,11 +1112,16 @@ fx_porta_down:
     ld e, a
     ld d, [hl]
 
-    ld a, c
     sub_from_r16 d, e, c
 
     jr fx_porta_up.finish
 
+
+;;; Processes effect 2, "tone portamento".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Target note
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A B DE HL
 fx_toneporta:
     jr nz, .do_toneporta
 
@@ -1130,13 +1144,6 @@ fx_toneporta:
     ret_dont_call_playnote
 
 .do_toneporta:
-    ;; A: tick
-    ;; ZF: (tick == 0)
-    ;; B: channel
-    ;; C: effect parameters
-
-    ;; free registers: A, D, E, H, L
-
     ld d, 0
     call ptr_to_channel_member
     push hl
@@ -1158,8 +1165,7 @@ fx_toneporta:
 
     cp d
     jr c, .subtract ; target is less than the current period
-    jr z, .high_byte_same
-    jr .add
+    jr nz, .add
 .high_byte_same:
     ld a, l
     cp e
@@ -1209,7 +1215,14 @@ fx_toneporta:
     res 7, [hl]
     jp update_channel
 
+
 ;; TODO: Find some way to de-duplicate this code!
+;;; Computes the pointer to a CH4 instrument.
+;;; Param: B = The instrument's ID
+;;; Param: DE = Instrument pointer table
+;;; Return: DE = Pointer to the instrument
+;;; Return: ZF = Set if and only if there was no instrument (ID == 0)
+;;; Destroy: AF
 setup_instrument_pointer_ch4:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1223,6 +1236,13 @@ setup_instrument_pointer_ch4:
     dec a ; Instrument 0 is "no instrument"
     add a
     jr setup_instrument_pointer.finish
+
+;;; Computes the pointer to an instrument.
+;;; Param: B = The instrument's ID
+;;; Param: DE = Instrument pointer table
+;;; Return: DE = Pointer to the instrument
+;;; Return: ZF = Set if and only if there was no instrument (ID == 0)
+;;; Destroy: AF
 setup_instrument_pointer:
     ;; Call with:
     ;; Instrument/High nibble of effect in B
@@ -1244,8 +1264,11 @@ setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
+
 _hUGE_dosound_banked::
 _hUGE_dosound::
+;;; Ticks the sound engine once.
+;;; Destroy: AF BC DE HL
 hUGE_dosound::
     ld a, [tick]
     or a
