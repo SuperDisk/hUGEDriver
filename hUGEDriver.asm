@@ -611,7 +611,6 @@ fx_call_routine:
     ;; jump to that location.
     load_hl_ind routines
     ld a, c
-    and $0f
     add a
     add_a_to_hl
     ld a, [hl+]
