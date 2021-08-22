@@ -30,7 +30,7 @@ ENDM
 ret_dont_call_playnote: MACRO
     pop hl
     pop af
-    ld a, 6 ; How many bytes until the next channel's code
+    ld a, 4 ; How many bytes until the next channel's code
     add_a_to_hl
     jp hl
 ENDM
@@ -1290,8 +1290,7 @@ hUGE_dosound::
     call do_effect
 
     pop af              ; 1 byte
-    jr nc, .after_note1 ; 2 bytes
-    call play_ch1_note     ; 3 bytes
+    call c, play_ch1_note     ; 3 bytes
 
 .after_note1:
     ;; Note playback
@@ -1331,8 +1330,7 @@ hUGE_dosound::
     call do_effect
 
     pop af              ; 1 byte
-    jr nc, .after_note2 ; 2 bytes
-    call play_ch2_note     ; 3 bytes
+    call c, play_ch2_note     ; 3 bytes
 
 .after_note2:
     loadShort pattern3, b, c
@@ -1397,8 +1395,7 @@ _addr = _addr + 1
     call do_effect
 
     pop af              ; 1 byte
-    jr nc, .after_note3 ; 2 bytes
-    call play_ch3_note     ; 3 bytes
+    call c, play_ch3_note     ; 3 bytes
 
 .after_note3:
     loadShort pattern4, b, c
@@ -1450,8 +1447,7 @@ _addr = _addr + 1
     call do_effect
 
     pop af              ; 1 byte
-    jr nc, .after_note4 ; 2 bytes
-    call play_ch4_note     ; 3 bytes
+    call c, play_ch4_note     ; 3 bytes
 
 .after_note4:
     ;; finally just update the tick/order/row values
