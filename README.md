@@ -78,6 +78,15 @@ __critical {
 
 Check out `player.asm` for a full fledged example of how to use the driver in an RGBDS project, and `gbdk_example/gbdk_player_example.c` for usage with GBDK C likewise.
 
+### `hUGE_mute_channel`
+
+**Caution**:
+As an optimization, hUGEDriver avoids loading the same wave present in wave RAM; when "muting" CH3 and loading your own wave, make sure to set `hUGE_current_wave` to `hUGE_NO_WAVE` (a dummy value) to force a refresh.
+
+### Routines
+
+TODO
+
 ## Files in this repo
 
 | File                      | Explanation                                                                                                         |
