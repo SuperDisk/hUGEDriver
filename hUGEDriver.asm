@@ -904,6 +904,7 @@ set_channel_volume:
     ;; Correct volume value in C
     ;; Channel number in B
 
+    swap c
     ld a, [mute_channels]
     dec b
     jr z, .set_chn_2_vol
@@ -917,30 +918,30 @@ set_channel_volume:
 
     ldh a, [rAUD1ENV]
     and %00001111
-    swap c
     or c
     ldh [rAUD1ENV], a
     ret
+
 .set_chn_2_vol:
     retMute 1
 
     ldh a, [rAUD2ENV]
     and %00001111
-    swap c
     or c
     ldh [rAUD2ENV], a
     ret
+
 .set_chn_3_vol:
     retMute 2
 
     ;; "Quantize" the more finely grained volume control down to one of 4 values.
     ld a, c
-    cp 10
+    cp 10 << 4
     jr nc, .one
-    cp 5
+    cp 5 << 4
     jr nc, .two
     or a
-    jr z, .zero
+    jr z, .done ; Zero maps to zero
 .three:
     ld a, %01100000
     jr .done
@@ -949,16 +950,13 @@ set_channel_volume:
     jr .done
 .one:
     ld a, %00100000
-    jr .done
-.zero:
-    xor a
 .done:
     ldh [rAUD3LEVEL], a
     ret
+
 .set_chn_4_vol:
     retMute 3
 
-    swap c
     ld a, c
     ldh [rAUD4ENV], a
     ret
