@@ -107,12 +107,13 @@ void hUGE_set_position(unsigned char pattern);
 void hUGE_set_position_banked(unsigned char pattern) __banked;
 
 extern volatile unsigned char hUGE_current_wave;
+#define hUGE_NO_WAVE 100
 
 inline void hUGE_reset_wave() {
-	hUGE_current_wave = 100;
+	hUGE_current_wave = hUGE_NO_WAVE;
 }
 inline void hUGE_reset_wave_banked() {
-	hUGE_current_wave = 100;
+	hUGE_current_wave = hUGE_NO_WAVE;
 }
 
 #endif
