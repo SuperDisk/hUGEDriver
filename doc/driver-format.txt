@@ -7,7 +7,7 @@ where
 
 N = Note code
 I = Instrument code
-C = Effect code
+E = Effect code
 X = Effect param 1
 Y = Effect param 2
 
