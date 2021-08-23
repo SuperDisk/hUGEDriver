@@ -515,9 +515,10 @@ play_ch3_note:
     ld a, [mute_channels]
     retMute 2
 
-    ;; This fixes a gameboy hardware quirk, apparently.
-    ;; The problem is emulated accurately in BGB.
-    ;; https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
+    ;; Triggering CH3 while it's reading a byte corrupts wave RAM.
+    ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
+    ;; This way, CH3 will be paused when we trigger it by writing to NR34.
+    ;; TODO: what if `highmask3` bit 7 is not set, though?
     xor a
     ldh [rAUD3ENA], a
     cpl
