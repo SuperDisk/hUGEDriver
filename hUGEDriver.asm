@@ -9,14 +9,6 @@ add_a_to_r16: MACRO
     ld HIGH(\1), a
 ENDM
 
-ret_dont_play_note: MACRO
-    pop hl
-    pop af
-    and a ; Clear carry to avoid calling `play_chX_note`
-    push af
-    jp hl
-ENDM
-
 load_de_ind: MACRO
     ld a, [\1]
     ld e, a
@@ -656,122 +648,6 @@ fx_set_duty:
     ret
 
 
-;;; Processes effect A, "volume slide".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = FX param; either nibble should be 0, otherwise weird (unspecified) behavior may arise
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF C DE HL
-fx_vol_slide:
-    ret nz
-
-    ;; This is really more of a "retrigger note with lower volume" effect and thus
-    ;; isn't really that useful. Instrument envelopes should be used instead.
-    ;; Might replace this effect with something different if a new effect is
-    ;; ever needed.
-
-    ;; check channel mute
-
-    ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
-    ;; Overall, these two instructions add 1 to the number.
-    ;; However, the first instruction will generate a carry for inputs of $02 and $03;
-    ;; the `adc` will pick the carry up, and "separate" 0 / 1 from 2 / 3 by an extra 1.
-    ;; Luckily, this yields correct results for 0 ($01), 1 ($02), and 2 ($03 + 1 = $04).
-    ;; We'll see about fixing 3 afterwards.
-    add -2
-    adc 3
-    ;; After being shifted left, the inputs are $02, $04, $08 and $0A; all are valid BCD,
-    ;; except for $0A. Since we just performed `add a`, DAA will correct the latter to $10.
-    ;; (This should be correctly emulated everywhere, since the inputs are identical to
-    ;; "regular" BCD.)
-    ;; When shifting the results back, we'll thus get $01, $02, $04 and $08!
-    add a
-    daa
-    rra
-    ld d, a
-    ld a, [mute_channels]
-    and d
-    ret nz
-
-    ;; setup the up and down params
-    ld a, c
-    and %00001111
-    ld d, a
-
-    ld a, c
-    and %11110000
-    ld e, a
-    swap e
-
-    ; There are 5 bytes between each envelope register
-    ld a, b
-    add a
-    add a
-    add b
-    add LOW(rAUD1ENV)
-    ld c, a
-
-    ldh a, [c]
-    and %11110000
-    swap a
-    sub d
-    jr nc, .cont1
-    xor a
-.cont1:
-    add e
-    cp $10
-    jr c, .cont2
-    ld a, $F
-.cont2:
-    swap a
-    ldh [c], a
-
-    ; Go to rAUDxGO, which is 2 bytes after
-    inc c
-    inc c
-    ldh a, [c]
-    or %10000000
-    ldh [c], a
-
-    jr play_note
-
-
-;;; Processes effect 7, "note delay".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Amount of ticks by which to delay the note
-;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF D HL
-fx_note_delay:
-    jr nz, .play_note
-
-    ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
-    ;; the C flag, which relies on the way the caller is implemented!!
-    ret_dont_play_note
-
-.play_note:
-    cp c
-    ret nz ; wait until the correct tick to play the note
-
-    ;; fallthrough
-
-
-;;; Plays a channel's current note.
-;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
-;;; Destroy: AF D HL
-play_note:
-    ld d, 0
-    call ptr_to_channel_member
-
-    ld a, b
-    add a
-    add LOW(play_note_routines)
-    ld l, a
-    adc HIGH(play_note_routines)
-    sub l
-    ld h, a
-    jp hl
-
-
 ;;; Processes (global) effect F, "set speed".
 ;;; Param: C = New amount of ticks per row
 ;;; Param: ZF = Set if and only if on tick 0
@@ -1092,27 +968,8 @@ fx_porta_down:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: A B DE HL
 fx_toneporta:
-    jr nz, .do_toneporta
+    jr z, .setup
 
-    ;; We're on tick zero, so load the note period into the toneporta target.
-    ld d, 4
-    call ptr_to_channel_member
-
-    ld a, [hl-]
-    ld d, h
-    ld e, l
-    call get_note_period
-    ld a, h
-    ld [de], a
-    dec de
-    ld a, l
-    ld [de], a
-
-    ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
-    ;; the C flag, which relies on the way the caller is implemented!!
-    ret_dont_play_note
-
-.do_toneporta:
     ld d, 0
     call ptr_to_channel_member
     push hl
@@ -1185,6 +1042,142 @@ fx_toneporta:
     res 7, [hl]
     ;; B must be preserved for this
     jp update_channel_freq
+
+.setup
+    ;; We're on tick zero, so load the note period into the toneporta target.
+    ld d, 4
+    call ptr_to_channel_member
+
+    ld a, [hl-]
+    ld d, h
+    ld e, l
+    call get_note_period
+    ld a, h
+    ld [de], a
+    dec de
+    ld a, l
+    ld [de], a
+
+ret_dont_play_note:
+    ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
+    ;; the C flag, which relies on the way the caller is implemented!!
+    pop hl
+    pop af
+    and a ; Clear carry to avoid calling `play_chX_note`
+    push af
+    jp hl
+
+
+;;; Processes effect A, "volume slide".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = FX param; either nibble should be 0, otherwise weird (unspecified) behavior may arise
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF C DE HL
+fx_vol_slide:
+    ret nz
+
+    ;; This is really more of a "retrigger note with lower volume" effect and thus
+    ;; isn't really that useful. Instrument envelopes should be used instead.
+    ;; Might replace this effect with something different if a new effect is
+    ;; ever needed.
+
+    ;; check channel mute
+
+    ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
+    ;; Overall, these two instructions add 1 to the number.
+    ;; However, the first instruction will generate a carry for inputs of $02 and $03;
+    ;; the `adc` will pick the carry up, and "separate" 0 / 1 from 2 / 3 by an extra 1.
+    ;; Luckily, this yields correct results for 0 ($01), 1 ($02), and 2 ($03 + 1 = $04).
+    ;; We'll see about fixing 3 afterwards.
+    add -2
+    adc 3
+    ;; After being shifted left, the inputs are $02, $04, $08 and $0A; all are valid BCD,
+    ;; except for $0A. Since we just performed `add a`, DAA will correct the latter to $10.
+    ;; (This should be correctly emulated everywhere, since the inputs are identical to
+    ;; "regular" BCD.)
+    ;; When shifting the results back, we'll thus get $01, $02, $04 and $08!
+    add a
+    daa
+    rra
+    ld d, a
+    ld a, [mute_channels]
+    and d
+    ret nz
+
+    ;; setup the up and down params
+    ld a, c
+    and %00001111
+    ld d, a
+
+    ld a, c
+    and %11110000
+    ld e, a
+    swap e
+
+    ; There are 5 bytes between each envelope register
+    ld a, b
+    add a
+    add a
+    add b
+    add LOW(rAUD1ENV)
+    ld c, a
+
+    ldh a, [c]
+    and %11110000
+    swap a
+    sub d
+    jr nc, .cont1
+    xor a
+.cont1:
+    add e
+    cp $10
+    jr c, .cont2
+    ld a, $F
+.cont2:
+    swap a
+    ldh [c], a
+
+    ; Go to rAUDxGO, which is 2 bytes after
+    inc c
+    inc c
+    ldh a, [c]
+    or %10000000
+    ldh [c], a
+
+    jr play_note
+
+
+;;; Processes effect 7, "note delay".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Amount of ticks by which to delay the note
+;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF D HL
+fx_note_delay:
+    jr z, ret_dont_play_note
+
+    cp c
+    ret nz ; wait until the correct tick to play the note
+
+    ;; fallthrough
+
+
+;;; Plays a channel's current note.
+;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
+;;; Destroy: AF D HL
+play_note:
+    ld d, 0
+    call ptr_to_channel_member
+
+    ld a, b
+    add a
+    add LOW(play_note_routines)
+    ld l, a
+    adc HIGH(play_note_routines)
+    sub l
+    ld h, a
+    jp hl
+
 
 
 ;; TODO: Find some way to de-duplicate this code!
@@ -1501,7 +1494,7 @@ process_effects:
     jr z, .after_effect1
 
     ld e, 0
-    call do_effect      ; make sure we never return with ret_dont_play_note macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect1:
     checkMute 1, .after_effect2
@@ -1517,7 +1510,7 @@ process_effects:
     jr z, .after_effect2
 
     ld e, 1
-    call do_effect      ; make sure we never return with ret_dont_play_note macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect2:
     checkMute 2, .after_effect3
@@ -1533,7 +1526,7 @@ process_effects:
     jr z, .after_effect3
 
     ld e, 2
-    call do_effect      ; make sure we never return with ret_dont_play_note macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect3:
     checkMute 3, .after_effect4
@@ -1581,7 +1574,7 @@ process_effects:
     jr z, .after_effect4
 
     ld e, 3
-    call do_effect      ; make sure we never return with ret_dont_play_note macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect4:
 
