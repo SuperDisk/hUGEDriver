@@ -235,10 +235,12 @@ ENDC
 
 .load_pattern:
     ld a, [hl+]
+    add c
     ld h, [hl]
     ld l, a
-    ld a, c
-    add_a_to_hl
+    adc h
+    sub l
+    ld h, a
 
     ld a, [hl+]
     ld [de], a
