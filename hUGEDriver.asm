@@ -341,9 +341,9 @@ get_note_poly:
     ld h, a
 
     ; B := (A-4) div 4;
-    sub 4
     srl a
     srl a
+    dec a
     ld l, a
 
     ; C := (A mod 4)+4;
