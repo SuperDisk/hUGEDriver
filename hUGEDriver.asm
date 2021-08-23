@@ -1098,15 +1098,16 @@ fx_porta_up:
     ld d, 0
     call ptr_to_channel_member
 
+    ;; Add C to 16-bit value at HL
     ld a, [hl+]
+    add c
     ld e, a
-    ld d, [hl]
+    adc [hl]
+    sub e
 
-    ld a, c
-    add_a_to_de
-
+    ;; Write back
 .finish:
-    ld a, d
+    ld d, a ; Store A for call to `update_channel`
     ld [hl-], a
     ld [hl], e
 
@@ -1125,12 +1126,14 @@ fx_porta_down:
     ld d, 0
     call ptr_to_channel_member
 
+    ;; Subtract C from 16-bit value at [HL]
     ld a, [hl+]
+    sub c
     ld e, a
-    ld d, [hl]
+    sbc a
+    add [hl]
 
-    sub_from_r16 d, e, c
-
+    ;; Write back
     jr fx_porta_up.finish
 
 
