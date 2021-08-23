@@ -9,7 +9,7 @@ add_a_to_r16: MACRO
     ld HIGH(\1), a
 ENDM
 
-ret_dont_call_playnote: MACRO
+ret_dont_play_note: MACRO
     pop hl
     pop af
     and a ; Clear carry to avoid calling `play_chX_note`
@@ -75,10 +75,6 @@ hUGE_current_wave::
 current_wave: db
 hUGE_NO_WAVE equ 100
     EXPORT hUGE_NO_WAVE
-
-;; Temporary storage for note periods
-;; TODO: can this be made without?
-temp_note_value: dw
 
 ;; Everything between this and `end_zero` is zero-initialized by `hUGE_init`
 start_zero:
@@ -459,18 +455,14 @@ play_ch1_note:
     retMute 0
 
     ;; Play a note on channel 1 (square wave)
-    ld a, [temp_note_value]
-    ld [channel_period1], a
+    ld hl, channel_period1
+    ld a, [hl+]
     ldh [rAUD1LOW], a
 
-    ld a, [temp_note_value+1]
-    ld [channel_period1+1], a
-
     ;; Get the highmask and apply it.
-    ld hl, highmask1
+    ld a, [highmask1]
     or [hl]
     ldh [rAUD1HIGH], a
-
     ret
 
 play_ch2_note:
@@ -478,18 +470,14 @@ play_ch2_note:
     retMute 1
 
     ;; Play a note on channel 2 (square wave)
-    ld a, [temp_note_value]
-    ld [channel_period2], a
+    ld hl, channel_period2
+    ld a, [hl+]
     ldh [rAUD2LOW], a
 
-    ld a, [temp_note_value+1]
-    ld [channel_period2+1], a
-
     ;; Get the highmask and apply it.
-    ld hl, highmask2
+    ld a, [highmask2]
     or [hl]
     ldh [rAUD2HIGH], a
-
     ret
 
 play_ch3_note:
@@ -506,18 +494,14 @@ play_ch3_note:
     ldh [rAUD3ENA], a
 
     ;; Play a note on channel 3 (waveform)
-    ld a, [temp_note_value]
-    ld [channel_period3], a
+    ld hl, channel_period3
+    ld a, [hl+]
     ldh [rAUD3LOW], a
 
-    ld a, [temp_note_value+1]
-    ld [channel_period3+1], a
-
     ;; Get the highmask and apply it.
-    ld hl, highmask3
+    ld a, [highmask3]
     or [hl]
     ldh [rAUD3HIGH], a
-
     ret
 
 play_ch4_note:
@@ -525,8 +509,7 @@ play_ch4_note:
     retMute 3
 
     ;; Play a "note" on channel 4 (noise)
-    ld a, [temp_note_value]
-    ld [channel_period4+1], a
+    ld a, [channel_period4]
     ldh [rAUD4POLY], a
 
     ;; Get the highmask and apply it.
@@ -761,18 +744,9 @@ fx_vol_slide:
 fx_note_delay:
     jr nz, .play_note
 
-    ;; Just store the note into the channel period, and don't play a note.
-    ld d, 0
-    call ptr_to_channel_member
-
-    ld a, [temp_note_value]
-    ld [hl+], a
-    ld a, [temp_note_value+1]
-    ld [hl], a
-
-    ;; Don't call _playnote. This is done by grabbing the return
-    ;; address and manually skipping the next call instruction.
-    ret_dont_call_playnote
+    ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
+    ;; the C flag, which relies on the way the caller is implemented!!
+    ret_dont_play_note
 
 .play_note:
     cp c
@@ -787,12 +761,6 @@ fx_note_delay:
 play_note:
     ld d, 0
     call ptr_to_channel_member
-
-    ;; TODO: Change this to accept HL instead?
-    ld a, [hl+]
-    ld [temp_note_value], a
-    ld a, [hl]
-    ld [temp_note_value+1], a
 
     ld a, b
     add a
@@ -1126,23 +1094,23 @@ fx_porta_down:
 fx_toneporta:
     jr nz, .do_toneporta
 
-    ;; We're on tick zero, so just move the temp note value into the toneporta target.
-    ld d, 2
+    ;; We're on tick zero, so load the note period into the toneporta target.
+    ld d, 4
     call ptr_to_channel_member
 
-    ;; If the note is nonexistent, then just return
-    ld a, [temp_note_value]
-    or a
-    jr z, .return_skip
+    ld a, [hl-]
+    ld d, h
+    ld e, l
+    call get_note_period
+    ld a, h
+    ld [de], a
+    dec de
+    ld a, l
+    ld [de], a
 
-    ld [hl+], a
-    ld a, [temp_note_value+1]
-    ld [hl], a
-
-    ;; Don't call _playnote. This is done by grabbing the return
-    ;; address and manually skipping the next call instruction.
-.return_skip:
-    ret_dont_call_playnote
+    ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
+    ;; the C flag, which relies on the way the caller is implemented!!
+    ret_dont_play_note
 
 .do_toneporta:
     ld d, 0
@@ -1282,13 +1250,18 @@ hUGE_dosound::
     ld de, channel_note1
     call get_current_note
 
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol1
+
+    ld a, b
+    and $0F
+    cp 3 ; If toneporta, don't load the channel period
+    jr z, .toneporta
+    ld a, l
+    ld [channel_period1], a
+    ld a, h
+    ld [channel_period1+1], a
+.toneporta
 
     ld hl, duty_instruments
     ld a, [hl+]
@@ -1328,13 +1301,18 @@ process_ch2:
     ld de, channel_note2
     call get_current_note
 
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol2
+
+    ld a, b
+    and $0F
+    cp 3 ; If toneporta, don't load the channel period
+    jr z, .toneporta
+    ld a, l
+    ld [channel_period2], a
+    ld a, h
+    ld [channel_period2+1], a
+.toneporta
 
     ld hl, duty_instruments
     ld a, [hl+]
@@ -1371,13 +1349,18 @@ process_ch3:
     ld de, channel_note3
     call get_current_note
 
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol3
+
+    ld a, b
+    and $0F
+    cp 3 ; If toneporta, don't load the channel period
+    jr z, .toneporta
+    ld a, l
+    ld [channel_period3], a
+    ld a, h
+    ld [channel_period3+1], a
+.toneporta
 
     ld hl, wave_instruments
     ld a, [hl+]
@@ -1451,8 +1434,10 @@ process_ch4:
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol4
 
+    ;; No toneporta check because it's not supported for CH4 anyway
+
     call get_note_poly
-    ld [temp_note_value], a
+    ld [channel_period4], a
 
     ld de, 0
     call setup_instrument_pointer
@@ -1477,13 +1462,13 @@ process_ch4:
     and %00111111
     ldh [rAUD4LEN], a
 
-    ld a, [temp_note_value]
+    ld a, [channel_period4]
     ld d, a
     ld a, [hl]
     and %10000000
     swap a
     or d
-    ld [temp_note_value], a
+    ld [channel_period4], a
 
     ld a, [hl]
     and %01000000
@@ -1516,7 +1501,7 @@ process_effects:
     jr z, .after_effect1
 
     ld e, 0
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note macro
 
 .after_effect1:
     checkMute 1, .after_effect2
@@ -1532,7 +1517,7 @@ process_effects:
     jr z, .after_effect2
 
     ld e, 1
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note macro
 
 .after_effect2:
     checkMute 2, .after_effect3
@@ -1548,7 +1533,7 @@ process_effects:
     jr z, .after_effect3
 
     ld e, 2
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note macro
 
 .after_effect3:
     checkMute 3, .after_effect4
@@ -1596,7 +1581,7 @@ process_effects:
     jr z, .after_effect4
 
     ld e, 3
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note macro
 
 .after_effect4:
 
