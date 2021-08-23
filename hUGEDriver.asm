@@ -1294,7 +1294,7 @@ _hUGE_dosound::
 hUGE_dosound::
     ld a, [tick]
     or a
-    jp nz, .process_effects
+    jp nz, process_effects
 
     ;; Note playback
     ld hl, pattern1
@@ -1337,7 +1337,7 @@ hUGE_dosound::
     pop af
     call c, play_ch1_note
 
-.after_note1:
+process_ch2:
     ;; Note playback
     ld hl, pattern2
     ld de, channel_note2
@@ -1377,7 +1377,7 @@ hUGE_dosound::
     pop af
     call c, play_ch2_note
 
-.after_note2:
+process_ch3:
     ld hl, pattern3
     ld de, channel_note3
     call get_current_note
@@ -1440,7 +1440,7 @@ ENDR
     pop af
     call c, play_ch3_note
 
-.after_note3:
+process_ch4:
     ld hl, pattern4
     ld a, [hl+]
     ld c, a
@@ -1495,11 +1495,10 @@ ENDR
     pop af
     call c, play_ch4_note
 
-.after_note4:
     ;; finally just update the tick/order/row values
     jp process_tick
 
-.process_effects:
+process_effects:
     ;; Only do effects if not on tick zero
     checkMute 0, .after_effect1
 
