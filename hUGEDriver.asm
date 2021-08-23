@@ -1287,7 +1287,10 @@ hUGE_dosound::
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol1
 
-    load_de_ind duty_instruments
+    ld hl, duty_instruments
+    ld a, [hl+]
+    ld d, [hl]
+    ld e, a
     call setup_instrument_pointer
     ld a, [highmask1]
     res 7, a ; Turn off the "initial" flag
@@ -1330,7 +1333,10 @@ process_ch2:
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol2
 
-    load_de_ind duty_instruments
+    ld hl, duty_instruments
+    ld a, [hl+]
+    ld d, [hl]
+    ld e, a
     call setup_instrument_pointer
     ld a, [highmask2]
     res 7, a ; Turn off the "initial" flag
@@ -1370,7 +1376,10 @@ process_ch3:
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol3
 
-    load_de_ind wave_instruments
+    ld hl, wave_instruments
+    ld a, [hl+]
+    ld d, [hl]
+    ld e, a
     call setup_instrument_pointer
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
