@@ -9,16 +9,6 @@ add_a_to_r16: MACRO
     ld \1, a
 ENDM
 
-;; Thanks PinoBatch!
-sub_from_r16: MACRO ;; (high, low, value)
-    ld a, \2
-    sub \3
-    ld \2, a
-    sbc a  ; A = -1 if borrow or 0 if not
-    add \1
-    ld \1, a
-ENDM
-
 add_a_to_hl: MACRO
     add_a_to_r16 h, l
 ENDM
@@ -69,13 +59,6 @@ checkMute: MACRO
     ld a, [mute_channels]
     bit \1, a
     jr nz, \2
-ENDM
-
-loadShort: MACRO
-    ld a, [\1]
-    ld \3, a
-    ld a, [\1 + 1]
-    ld \2, a
 ENDM
 
 ;; Maximum pattern length
@@ -1297,7 +1280,10 @@ hUGE_dosound::
     jp nz, .process_effects
 
     ;; Note playback
-    loadShort pattern1, b, c
+    ld hl, pattern1
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     ld de, channel_note1
     call get_current_note
     push af
@@ -1339,7 +1325,10 @@ hUGE_dosound::
 
 .after_note1:
     ;; Note playback
-    loadShort pattern2, b, c
+    ld hl, pattern2
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     ld de, channel_note2
     call get_current_note
     push af
@@ -1378,7 +1367,10 @@ hUGE_dosound::
     call c, play_ch2_note
 
 .after_note2:
-    loadShort pattern3, b, c
+    ld hl, pattern3
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     ld de, channel_note3
     call get_current_note
 
@@ -1441,7 +1433,10 @@ ENDR
     call c, play_ch3_note
 
 .after_note3:
-    loadShort pattern4, b, c
+    ld hl, pattern4
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     call get_current_row
     ld [channel_note4], a
     cp LAST_NOTE
@@ -1500,7 +1495,10 @@ ENDR
     ;; Only do effects if not on tick zero
     checkMute 0, .after_effect1
 
-    loadShort pattern1, b, c
+    ld hl, pattern1
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     call get_current_row
 
     ld a, c
@@ -1513,7 +1511,10 @@ ENDR
 .after_effect1:
     checkMute 1, .after_effect2
 
-    loadShort pattern2, b, c
+    ld hl, pattern2
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     call get_current_row
 
     ld a, c
@@ -1526,7 +1527,10 @@ ENDR
 .after_effect2:
     checkMute 2, .after_effect3
 
-    loadShort pattern3, b, c
+    ld hl, pattern3
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     call get_current_row
 
     ld a, c
@@ -1539,7 +1543,10 @@ ENDR
 .after_effect3:
     checkMute 3, .after_effect4
 
-    loadShort pattern4, b, c
+    ld hl, pattern4
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
     call get_current_row
     cp LAST_NOTE
     jr nc, .done_macro
