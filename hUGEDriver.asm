@@ -76,6 +76,10 @@ current_wave: db
 hUGE_NO_WAVE equ 100
     EXPORT hUGE_NO_WAVE
 
+;; Temporary storage for note periods
+;; TODO: can this be made without?
+temp_note_value: dw
+
 ;; Everything between this and `end_zero` is zero-initialized by `hUGE_init`
 start_zero:
 
@@ -84,7 +88,6 @@ current_order: db
 next_order: db
 row_break: db
 
-temp_note_value: dw
 row: db
 tick: db
 counter: db
