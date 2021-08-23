@@ -1563,23 +1563,22 @@ ENDR
     jr nc, .done_macro
 
     inc de
-    push de
-    push de
 
-    add_a_to_de
-    ld a, [de]
-    add h
+    ld l, a
+    ld a, h
+    ld h, 0
+    add hl, de
+    add [hl]
     call get_note_poly
-    ld d, a
-    pop hl
-    ld a, [hl]
+    ld l, a
+    ld a, [de]
+    ld e, a
     and %10000000
     swap a
-    or d
+    or l
     ldh [rAUD4POLY], a
 
-    pop de
-    ld a, [de]
+    ld a, e
     and %01000000
     ldh [rAUD4GO], a
 
