@@ -408,14 +408,15 @@ ENDR
     ret
 
 
-;;; Ticks a channel.
+;;; Updates a channel's frequency, and possibly restarts it.
+;;; Note that CH4 is *never* restarted by this!
 ;;; Param: B = Which channel to update (0 = CH1, 1 = CH2, etc.)
 ;;; Param: (ignored for CH4) A = ORed to the value written to NRx4
 ;;; Param: (for CH4) E = Note ID
 ;;; Param: (otherwise) DE = Note period
 ;;; Destroy: AF B
 ;;; Destroy: (for CH4) HL
-update_channel:
+update_channel_freq:
     ld c, a
     ld a, [mute_channels]
     dec b
@@ -434,6 +435,7 @@ update_channel:
     or c
     ldh [rAUD1HIGH], a
     ret
+
 .update_channel2:
     retMute 1
 
@@ -443,6 +445,7 @@ update_channel:
     or c
     ldh [rAUD2HIGH], a
     ret
+
 .update_channel3:
     retMute 2
 
@@ -452,6 +455,7 @@ update_channel:
     or c
     ldh [rAUD3HIGH], a
     ret
+
 .update_channel4:
     retMute 3
 
@@ -1014,7 +1018,7 @@ fx_vibrato:
     ld d, h
     ld e, l
     xor a
-    jp update_channel
+    jp update_channel_freq
 
 
 ;;; Processes effect 8, "arpeggio".
@@ -1075,7 +1079,7 @@ fx_arpeggio:
     ld d, h
     ld e, l
     xor a
-    jp update_channel
+    jp update_channel_freq
 
 
 ;;; Processes effect 1, "portamento up".
@@ -1098,12 +1102,12 @@ fx_porta_up:
 
     ;; Write back
 .finish:
-    ld d, a ; Store A for call to `update_channel`
+    ld d, a ; Store A for call to `update_channel_freq`
     ld [hl-], a
     ld [hl], e
 
     xor a
-    jp update_channel
+    jp update_channel_freq
 
 
 ;;; Processes (global) effect 2, "portamento down".
@@ -1226,7 +1230,7 @@ fx_toneporta:
     ld a, [hl]
     res 7, [hl]
     ;; B must be preserved for this
-    jp update_channel
+    jp update_channel_freq
 
 
 ;; TODO: Find some way to de-duplicate this code!
