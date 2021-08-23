@@ -482,11 +482,11 @@ play_ch1_note:
     retMute 0
 
     ;; Play a note on channel 1 (square wave)
-    ld a, [temp_note_value+1]
+    ld a, [temp_note_value]
     ld [channel_period1], a
     ldh [rAUD1LOW], a
 
-    ld a, [temp_note_value]
+    ld a, [temp_note_value+1]
     ld [channel_period1+1], a
 
     ;; Get the highmask and apply it.
@@ -501,11 +501,11 @@ play_ch2_note:
     retMute 1
 
     ;; Play a note on channel 2 (square wave)
-    ld a, [temp_note_value+1]
+    ld a, [temp_note_value]
     ld [channel_period2], a
     ldh [rAUD2LOW], a
 
-    ld a, [temp_note_value]
+    ld a, [temp_note_value+1]
     ld [channel_period2+1], a
 
     ;; Get the highmask and apply it.
@@ -529,11 +529,11 @@ play_ch3_note:
     ldh [rAUD3ENA], a
 
     ;; Play a note on channel 3 (waveform)
-    ld a, [temp_note_value+1]
+    ld a, [temp_note_value]
     ld [channel_period3], a
     ldh [rAUD3LOW], a
 
-    ld a, [temp_note_value]
+    ld a, [temp_note_value+1]
     ld [channel_period3+1], a
 
     ;; Get the highmask and apply it.
@@ -788,9 +788,9 @@ fx_note_delay:
     ld d, 0
     call ptr_to_channel_member
 
-    ld a, [temp_note_value+1]
-    ld [hl+], a
     ld a, [temp_note_value]
+    ld [hl+], a
+    ld a, [temp_note_value+1]
     ld [hl], a
 
     ;; Don't call _playnote. This is done by grabbing the return
@@ -813,9 +813,9 @@ play_note:
 
     ;; TODO: Change this to accept HL instead?
     ld a, [hl+]
-    ld [temp_note_value+1], a
-    ld a, [hl]
     ld [temp_note_value], a
+    ld a, [hl]
+    ld [temp_note_value+1], a
 
     ld a, b
     add a
@@ -1150,12 +1150,12 @@ fx_toneporta:
     call ptr_to_channel_member
 
     ;; If the note is nonexistent, then just return
-    ld a, [temp_note_value+1]
+    ld a, [temp_note_value]
     or a
     jr z, .return_skip
 
     ld [hl+], a
-    ld a, [temp_note_value]
+    ld a, [temp_note_value+1]
     ld [hl], a
 
     ;; Don't call _playnote. This is done by grabbing the return
@@ -1326,9 +1326,9 @@ hUGE_dosound::
     ld [highmask1], a
 
 .do_setvol1:
-    ld a, h
-    ld [temp_note_value], a
     ld a, l
+    ld [temp_note_value], a
+    ld a, h
     ld [temp_note_value+1], a
 
     ld e, 0
@@ -1366,9 +1366,9 @@ hUGE_dosound::
     ld [highmask2], a
 
 .do_setvol2:
-    ld a, h
-    ld [temp_note_value], a
     ld a, l
+    ld [temp_note_value], a
+    ld a, h
     ld [temp_note_value+1], a
 
     ld e, 1
@@ -1382,9 +1382,9 @@ hUGE_dosound::
     ld de, channel_note3
     call get_current_note
 
-    ld a, h
-    ld [temp_note_value], a
     ld a, l
+    ld [temp_note_value], a
+    ld a, h
     ld [temp_note_value+1], a
 
     push af
