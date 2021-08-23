@@ -25,24 +25,6 @@ ret_dont_call_playnote: MACRO
     jp hl
 ENDM
 
-add_a_ind_ret_hl: MACRO
-    ld hl, \1
-    add [hl]
-    inc hl
-    ld h, [hl]
-    ld l, a
-    adc h
-    sub l
-    ld h, a
-ENDM
-
-load_hl_ind: MACRO
-    ld hl, \1
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-ENDM
-
 load_de_ind: MACRO
     ld a, [\1]
     ld e, a
@@ -1013,15 +995,19 @@ fx_vibrato:
     jr z, .go_up
 .restore:
     call get_note_period
+    ld d, h
+    ld e, l
     jr .finish_vibrato
 .go_up:
     call get_note_period
     ld a, c
     and %00001111
-    add_a_to_hl
+    add l
+    ld e, a
+    adc h
+    sub e
+    ld d, a
 .finish_vibrato:
-    ld d, h
-    ld e, l
     xor a
     jp update_channel_freq
 
@@ -1408,13 +1394,21 @@ process_ch3:
     ld a, [de]
     inc de
 
-    ;; Check to see if we need to copy a wave and then do so
+    ;; Check to see if we need to copy the wave
     ld hl, current_wave
     cp [hl]
     jr z, .no_wave_copy
     ld [hl], a
+    ;; Get pointer to new wave
     swap a
-    add_a_ind_ret_hl waves
+    ld hl, waves
+    add [hl]
+    inc hl
+    ld h, [hl]
+    ld l, a
+    adc h
+    sub l
+    ld h, a
 
     xor a
     ldh [rAUD3ENA], a
@@ -1463,7 +1457,10 @@ process_ch4:
 
     checkMute 3, .do_setvol4
 
-    load_hl_ind noise_instruments
+    ld hl, noise_instruments
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
     sla e
     add hl, de
 
