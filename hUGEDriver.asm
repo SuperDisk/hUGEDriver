@@ -63,8 +63,35 @@ ENDM
 
 ;; Maximum pattern length
 PATTERN_LENGTH EQU 64
+
+;; Channel "struct" definition
+CHANNEL_NB_FIELDS equ 6
+CHANNEL_FIELD0 equs "period: dw"
+CHANNEL_FIELD1 equs "toneporta_target: dw"
+CHANNEL_FIELD2 equs "note: db"
+CHANNEL_FIELD3 equs "vibrato_tremolo_phase: db"
+CHANNEL_FIELD4 equs "envelope: db"
+CHANNEL_FIELD5 equs "highmask: db"
+
+;; Channel offsets definition
+rsreset
+FOR I, CHANNEL_NB_FIELDS
+    DEF TMP equs STRRPL("{CHANNEL_FIELD{d:I}}", ": d", " r")
+    DEF CHANNEL_{TMP}
+    PURGE TMP
+ENDR
 ;; Amount to be shifted in order to skip a channel.
 CHANNEL_SIZE_EXPONENT EQU 3
+assert _RS == 1 << CHANNEL_SIZE_EXPONENT, "Channel struct size must be a power of 2!"
+
+;; Macro to define a channel struct
+MACRO channel
+    channel\1:
+    FOR I, CHANNEL_NB_FIELDS
+        ch\1_{CHANNEL_FIELD{d:I}}
+    ENDR
+ENDM
+
 
 SECTION "Playback variables", WRAM0
 ;; Active song descriptor
@@ -116,49 +143,10 @@ tick: db
 counter: db
 
 channels:
-;;;;;;;;;;;
-;;Channel 1
-;;;;;;;;;;;
-channel1:
-channel_period1: dw
-toneporta_target1: dw
-channel_note1: db
-vibrato_tremolo_phase1: db
-envelope1: db
-highmask1: db
-
-;;;;;;;;;;;
-;;Channel 2
-;;;;;;;;;;;
-channel2:
-channel_period2: dw
-toneporta_target2: dw
-channel_note2: db
-vibrato_tremolo_phase2: db
-envelope2: db
-highmask2: db
-
-;;;;;;;;;;;
-;;Channel 3
-;;;;;;;;;;;
-channel3:
-channel_period3: dw
-toneporta_target3: dw
-channel_note3: db
-vibrato_tremolo_phase3: db
-envelope3: db
-highmask3: db
-
-;;;;;;;;;;;
-;;Channel 4
-;;;;;;;;;;;
-channel4:
-channel_period4: dw
-toneporta_target4: dw
-channel_note4: db
-vibrato_tremolo_phase4: db
-envelope4: db
-highmask4: db
+    channel 1
+    channel 2
+    channel 3
+    channel 4
 
 end_zero:
 
@@ -202,8 +190,8 @@ ENDC
 
     ;; These two are zero-initialized by the loop above, so these two writes must come after
     ld a, %11110000
-    ld [envelope1], a
-    ld [envelope2], a
+    ld [ch1_envelope], a
+    ld [ch2_envelope], a
 
     ;; Force loading the next wave
     ld a, hUGE_NO_WAVE
@@ -483,14 +471,14 @@ play_ch1_note:
 
     ;; Play a note on channel 1 (square wave)
     ld a, [temp_note_value]
-    ld [channel_period1], a
+    ld [ch1_period], a
     ldh [rAUD1LOW], a
 
     ld a, [temp_note_value+1]
-    ld [channel_period1+1], a
+    ld [ch1_period+1], a
 
     ;; Get the highmask and apply it.
-    ld hl, highmask1
+    ld hl, ch1_highmask
     or [hl]
     ldh [rAUD1HIGH], a
 
@@ -502,14 +490,14 @@ play_ch2_note:
 
     ;; Play a note on channel 2 (square wave)
     ld a, [temp_note_value]
-    ld [channel_period2], a
+    ld [ch2_period], a
     ldh [rAUD2LOW], a
 
     ld a, [temp_note_value+1]
-    ld [channel_period2+1], a
+    ld [ch2_period+1], a
 
     ;; Get the highmask and apply it.
-    ld hl, highmask2
+    ld hl, ch2_highmask
     or [hl]
     ldh [rAUD2HIGH], a
 
@@ -522,7 +510,7 @@ play_ch3_note:
     ;; Triggering CH3 while it's reading a byte corrupts wave RAM.
     ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
     ;; This way, CH3 will be paused when we trigger it by writing to NR34.
-    ;; TODO: what if `highmask3` bit 7 is not set, though?
+    ;; TODO: what if `ch3_highmask` bit 7 is not set, though?
     xor a
     ldh [rAUD3ENA], a
     cpl
@@ -530,14 +518,14 @@ play_ch3_note:
 
     ;; Play a note on channel 3 (waveform)
     ld a, [temp_note_value]
-    ld [channel_period3], a
+    ld [ch3_period], a
     ldh [rAUD3LOW], a
 
     ld a, [temp_note_value+1]
-    ld [channel_period3+1], a
+    ld [ch3_period+1], a
 
     ;; Get the highmask and apply it.
-    ld hl, highmask3
+    ld hl, ch3_highmask
     or [hl]
     ldh [rAUD3HIGH], a
 
@@ -549,11 +537,11 @@ play_ch4_note:
 
     ;; Play a "note" on channel 4 (noise)
     ld a, [temp_note_value]
-    ld [channel_period4+1], a
+    ld [ch4_period+1], a
     ldh [rAUD4POLY], a
 
     ;; Get the highmask and apply it.
-    ld a, [highmask4]
+    ld a, [ch4_highmask]
     ldh [rAUD4GO], a
 
     ret
@@ -785,7 +773,7 @@ fx_note_delay:
     jr nz, .play_note
 
     ;; Just store the note into the channel period, and don't play a note.
-    ld d, 0
+    ld d, CHANNEL_period
     call ptr_to_channel_member
 
     ld a, [temp_note_value]
@@ -808,7 +796,7 @@ fx_note_delay:
 ;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
 ;;; Destroy: AF D HL
 play_note:
-    ld d, 0
+    ld d, CHANNEL_period
     call ptr_to_channel_member
 
     ;; TODO: Change this to accept HL instead?
@@ -999,7 +987,7 @@ fx_vibrato:
     ;; (0x3  = 0.25)
     ;; (0x7  = 0.125)
     ;; (0xf  = 0.0625)
-    ld d, 4
+    ld d, CHANNEL_note
     call ptr_to_channel_member
 
     ld a, c
@@ -1034,7 +1022,7 @@ fx_vibrato:
 fx_arpeggio:
     ret z
 
-    ld d, 4
+    ld d, CHANNEL_note
     call ptr_to_channel_member
     ld d, [hl]
 
@@ -1095,7 +1083,7 @@ fx_arpeggio:
 fx_porta_up:
     ret z
 
-    ld d, 0
+    ld d, CHANNEL_period
     call ptr_to_channel_member
 
     ;; Add C to 16-bit value at HL
@@ -1123,7 +1111,7 @@ fx_porta_up:
 fx_porta_down:
     ret z
 
-    ld d, 0
+    ld d, CHANNEL_period
     call ptr_to_channel_member
 
     ;; Subtract C from 16-bit value at [HL]
@@ -1146,7 +1134,7 @@ fx_toneporta:
     jr nz, .do_toneporta
 
     ;; We're on tick zero, so just move the temp note value into the toneporta target.
-    ld d, 2
+    ld d, CHANNEL_toneporta_target
     call ptr_to_channel_member
 
     ;; If the note is nonexistent, then just return
@@ -1164,7 +1152,7 @@ fx_toneporta:
     ret_dont_call_playnote
 
 .do_toneporta:
-    ld d, 0
+    ld d, CHANNEL_period
     call ptr_to_channel_member
     push hl
 
@@ -1298,14 +1286,14 @@ hUGE_dosound::
 
     ;; Note playback
     ld hl, pattern1
-    ld de, channel_note1
+    ld de, ch1_note
     call get_current_note
     push af
     jr nc, .do_setvol1
 
     load_de_ind duty_instruments
     call setup_instrument_pointer
-    ld a, [highmask1]
+    ld a, [ch1_highmask]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask1
 
@@ -1323,7 +1311,7 @@ hUGE_dosound::
     ld a, [de]
 
 .write_mask1:
-    ld [highmask1], a
+    ld [ch1_highmask], a
 
 .do_setvol1:
     ld a, l
@@ -1340,14 +1328,14 @@ hUGE_dosound::
 process_ch2:
     ;; Note playback
     ld hl, pattern2
-    ld de, channel_note2
+    ld de, ch2_note
     call get_current_note
     push af
     jr nc, .do_setvol2
 
     load_de_ind duty_instruments
     call setup_instrument_pointer
-    ld a, [highmask2]
+    ld a, [ch2_highmask]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask2
 
@@ -1363,7 +1351,7 @@ process_ch2:
     ld a, [de]
 
 .write_mask2:
-    ld [highmask2], a
+    ld [ch2_highmask], a
 
 .do_setvol2:
     ld a, l
@@ -1379,7 +1367,7 @@ process_ch2:
 
 process_ch3:
     ld hl, pattern3
-    ld de, channel_note3
+    ld de, ch3_note
     call get_current_note
 
     ld a, l
@@ -1393,7 +1381,7 @@ process_ch3:
 
     load_de_ind wave_instruments
     call setup_instrument_pointer
-    ld a, [highmask3]
+    ld a, [ch3_highmask]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask3
 
@@ -1431,7 +1419,7 @@ ENDR
     ld a, [de]
 
 .write_mask3:
-    ld [highmask3], a
+    ld [ch3_highmask], a
 
 .do_setvol3:
     ld e, 2
@@ -1446,7 +1434,7 @@ process_ch4:
     ld c, a
     ld b, [hl]
     call get_current_row
-    ld [channel_note4], a
+    ld [ch4_note], a
     cp LAST_NOTE
     push af
     jr nc, .do_setvol4
@@ -1457,7 +1445,7 @@ process_ch4:
     ld de, 0
     call setup_instrument_pointer
 
-    ld a, [highmask4]
+    ld a, [ch4_highmask]
     res 7, a ; Turn off the "initial" flag
     jr z, .write_mask4
 
@@ -1486,7 +1474,7 @@ process_ch4:
     and %01000000
     or  %10000000
 .write_mask4:
-    ld [highmask4], a
+    ld [ch4_highmask], a
 
 .do_setvol4:
     ld e, 3
