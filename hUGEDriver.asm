@@ -1278,7 +1278,13 @@ hUGE_dosound::
     ld hl, pattern1
     ld de, channel_note1
     call get_current_note
-    push af
+
+    ld a, l
+    ld [temp_note_value], a
+    ld a, h
+    ld [temp_note_value+1], a
+
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol1
 
     load_de_ind duty_instruments
@@ -1304,11 +1310,6 @@ hUGE_dosound::
     ld [highmask1], a
 
 .do_setvol1:
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     ld e, 0
     call do_effect
 
@@ -1320,7 +1321,13 @@ process_ch2:
     ld hl, pattern2
     ld de, channel_note2
     call get_current_note
-    push af
+
+    ld a, l
+    ld [temp_note_value], a
+    ld a, h
+    ld [temp_note_value+1], a
+
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol2
 
     load_de_ind duty_instruments
@@ -1344,11 +1351,6 @@ process_ch2:
     ld [highmask2], a
 
 .do_setvol2:
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     ld e, 1
     call do_effect
 
@@ -1365,8 +1367,7 @@ process_ch3:
     ld a, h
     ld [temp_note_value+1], a
 
-    push af
-
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol3
 
     load_de_ind wave_instruments
@@ -1434,7 +1435,8 @@ process_ch4:
     call get_current_row
     ld [channel_note4], a
     cp LAST_NOTE
-    push af
+
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol4
 
     call get_note_poly
