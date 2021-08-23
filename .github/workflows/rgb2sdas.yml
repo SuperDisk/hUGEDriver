@@ -1,0 +1,67 @@
+name: Build rgb2sdas
+
+on:
+  push:
+    paths:
+      - tools/rgb2sdas.pas
+      - .github/workflows/rgb2sdas.yml
+  pull_request:
+    paths:
+      - tools/rgb2sdas.pas
+      - .github/workflows/rgb2sdas.yml
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-20.04
+          - macos-10.15
+          - windows-2019
+        include:
+          - os: ubuntu-20.04
+            name: Linux
+            outname: rgb2sdas
+          - os: macos-10.15
+            name: Mac
+            outname: rgb2sdas
+          - os: windows-2019
+            name: Windows
+            outname: rgb2sdas.exe
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Ubuntu dependencies
+        if: matrix.name == 'Linux'
+        run: |
+          sudo apt -qq update
+          sudo apt install -yq fpc
+
+      - name: Install macOS dependencies
+        if: matrix.name == 'Mac'
+        run: |
+          brew install fpc
+
+      - name: Install Windows dependencies
+        if: matrix.name == 'Windows'
+        shell: bash
+        run: |
+          choco install lazarus
+
+      - name: Check out hUGEDriver
+        uses: actions/checkout@v2
+        with:
+          path: hUGEDriver
+
+      - name: Build rgb2sdas
+        shell: bash
+        working-directory: hUGEDriver/tools
+        run: | # The PATH shenanigans is because `fpc` is not on the PATH --"
+          export PATH="$PATH:/c/lazarus/fpc/3.2.0/bin/x86_64-win64"
+          fpc -B -O3 -vewz -Xs -o"${{ matrix.outname }}" rgb2sdas.pas
+
+      - name: Store build
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.name }} build
+          path: hUGEDriver/tools/${{ matrix.outname }}
