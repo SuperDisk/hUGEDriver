@@ -308,7 +308,7 @@ get_current_row:
     ret
 
 ;;; Gets the "period" of a pattern's current note.
-;;; Param: BC = Pointer to the pattern
+;;; Param: HL = Pointer to the pattern pointer
 ;;; Param: [row] = Index of the current row
 ;;; Param: DE = Location to write the note's index to, if applicable
 ;;; Return: HL = Note's period
@@ -318,6 +318,10 @@ get_current_row:
 ;;; Return: C = Effect parameter
 ;;; Destroy: AF
 get_current_note:
+    ld a, [hl+]
+    ld c, a
+    ld b, [hl]
+
     call get_current_row
     ld hl, 0
 
@@ -1294,9 +1298,6 @@ hUGE_dosound::
 
     ;; Note playback
     ld hl, pattern1
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
     ld de, channel_note1
     call get_current_note
     push af
@@ -1339,9 +1340,6 @@ hUGE_dosound::
 .after_note1:
     ;; Note playback
     ld hl, pattern2
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
     ld de, channel_note2
     call get_current_note
     push af
@@ -1381,9 +1379,6 @@ hUGE_dosound::
 
 .after_note2:
     ld hl, pattern3
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
     ld de, channel_note3
     call get_current_note
 
