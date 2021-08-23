@@ -84,13 +84,13 @@ temp_note_value: dw
 start_zero:
 
 mute_channels: db
-current_order: db
-next_order: db
-row_break: db
 
-row: db
-tick: db
 counter: db
+tick: db
+row_break: db
+next_order: db
+row: db
+current_order: db
 
 channels:
 ;;;;;;;;;;;
@@ -1499,7 +1499,7 @@ process_ch4:
     call c, play_ch4_note
 
     ;; finally just update the tick/order/row values
-    jp process_tick
+    jp tick_time
 
 process_effects:
     ;; Only do effects if not on tick zero
@@ -1600,30 +1600,24 @@ process_effects:
 
 .after_effect4:
 
-process_tick:
+tick_time:
     ld hl, counter
     inc [hl]
 
+    assert counter + 1 == tick
+    inc hl ; ld hl, tick
+    inc [hl] ; Increment tick counter
+
+    ;; Should we switch to the next row?
     ld a, [ticks_per_row]
-    ld b, a
+    sub [hl]
+    ret nz ; Nope.
+    ld [hl+], a ; Reset tick to 0
+    ;; Below code relies on a == 0
 
-    ld hl, tick
-    ld a, [hl]
-    inc a
-
-    cp b
-    jr z, .newrow
-
-    ld [hl], a
-    ret
-
-.newrow:
-    ;; Reset tick to 0
-    ld [hl], 0
-
+    assert tick + 1 == row_break
     ;; Check if we need to perform a row break or pattern break
-    ld a, [row_break]
-    or a
+    or [hl] ; a == 0, so this is `ld a, [hl]` that also alters flags
     jr z, .no_break
 
     ;; These are offset by one so we can check to see if they've
@@ -1631,13 +1625,12 @@ process_tick:
     dec a
     ld b, a
 
-    ld hl, row_break
     xor a
-    ld [hl-], a
+    ld [hl+], a
+    assert row_break + 1 == next_order
     or [hl]     ; a = [next_order], zf = ([next_order] == 0)
-    ld [hl], 0
-
     jr z, .neworder
+    ld [hl], 0
 
     dec a
     add a ; multiply order by 2 (they are words)
@@ -1648,7 +1641,6 @@ process_tick:
     ;; Increment row.
     ld a, [row]
     inc a
-    ld b, a
     cp PATTERN_LENGTH
     jr nz, .noreset
 
@@ -1670,8 +1662,8 @@ process_tick:
     ld c, a
     call load_patterns
 
-.noreset:
     ld a, b
+.noreset:
     ld [row], a
 
 IF DEF(PREVIEW_MODE)
