@@ -209,7 +209,13 @@ ENDC
     ld a, hUGE_NO_WAVE
     ld [current_wave], a
 
+;; Preview mode needs to load the order ID from memory
+IF !DEF(PREVIEW_MODE)
     ld c, 0
+ELSE
+    ld a, [current_order]
+    ld c, a
+ENDC
     ;; fallthrough (load the pattern pointers)
 
 ;;; Sets all 4 pattern pointers from a certain index in the respective 4 orders.
