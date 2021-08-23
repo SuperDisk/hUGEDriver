@@ -345,9 +345,9 @@ get_current_note:
 ;;; Destroy: AF
 get_note_period:
     add a ;; double it to get index into hi/lo table
-    add a, LOW(note_table)
+    add LOW(note_table)
     ld l, a
-    adc a, HIGH(note_table)
+    adc HIGH(note_table)
     sub l
     ld h, a
     ld a, [hl+]
@@ -409,9 +409,9 @@ REPT CHANNEL_SIZE_EXPONENT
 ENDR
     add d
     ld hl, channels
-    add a, LOW(channels)
+    add LOW(channels)
     ld l, a
-    adc a, HIGH(channels)
+    adc HIGH(channels)
     sub l
     ld h, a
     ret
@@ -569,11 +569,11 @@ do_effect:
     ld a, b
     and %00001111
     ;; Multiply by 2 to get offset into table
-    add a, a
+    add a
 
-    add a, LOW(.jump)
+    add LOW(.jump)
     ld l, a
-    adc a, HIGH(.jump)
+    adc HIGH(.jump)
     sub l
     ld h, a
 
@@ -627,10 +627,10 @@ fx_set_master_volume:
 fx_call_routine:
     sla c
     ld a, [routines]
-    add a, c
+    add c
     ld l, a
     ld a, [routines+1]
-    adc a, 0
+    adc 0
     ld h, a
 
     ld a, [hl+]
@@ -717,14 +717,14 @@ fx_vol_slide:
     ;; the `adc` will pick the carry up, and "separate" 0 / 1 from 2 / 3 by an extra 1.
     ;; Luckily, this yields correct results for 0 ($01), 1 ($02), and 2 ($03 + 1 = $04).
     ;; We'll see about fixing 3 afterwards.
-    add a, -2
-    adc a, 3
+    add -2
+    adc 3
     ;; After being shifted left, the inputs are $02, $04, $08 and $0A; all are valid BCD,
-    ;; except for $0A. Since we just performed `add a, a`, DAA will correct the latter to $10.
+    ;; except for $0A. Since we just performed `add a`, DAA will correct the latter to $10.
     ;; (This should be correctly emulated everywhere, since the inputs are identical to
     ;; "regular" BCD.)
     ;; When shifting the results back, we'll thus get $01, $02, $04 and $08!
-    add a, a
+    add a
     daa
     rra
     ld d, a
@@ -819,9 +819,9 @@ play_note:
 
     ld a, b
     add a
-    add a, LOW(play_note_routines)
+    add LOW(play_note_routines)
     ld l, a
-    adc a, HIGH(play_note_routines)
+    adc HIGH(play_note_routines)
     sub l
     ld h, a
     jp hl
@@ -877,14 +877,14 @@ fx_note_cut:
     ;; the `adc` will pick the carry up, and "separate" 0 / 1 from 2 / 3 by an extra 1.
     ;; Luckily, this yields correct results for 0 ($01), 1 ($02), and 2 ($03 + 1 = $04).
     ;; We'll see about fixing 3 afterwards.
-    add a, -2
-    adc a, 3
+    add -2
+    adc 3
     ;; After being shifted left, the inputs are $02, $04, $08 and $0A; all are valid BCD,
-    ;; except for $0A. Since we just performed `add a, a`, DAA will correct the latter to $10.
+    ;; except for $0A. Since we just performed `add a`, DAA will correct the latter to $10.
     ;; (This should be correctly emulated everywhere, since the inputs are identical to
     ;; "regular" BCD.)
     ;; When shifting the results back, we'll thus get $01, $02, $04 and $08!
-    add a, a
+    add a
     daa
     rra
     ld d, a
@@ -903,7 +903,7 @@ note_cut:
     add a
     add a
     add b ; multiply by 5
-    add a, LOW(rAUD1ENV)
+    add LOW(rAUD1ENV)
     ld l, a
     ld h, HIGH(rAUD1ENV)
     xor a
@@ -1045,7 +1045,7 @@ fx_arpeggio:
 
     jr .test_greater_than_two
 .greater_than_two:
-    sub a, 3
+    sub 3
 .test_greater_than_two:
     cp 3
     jr nc, .greater_than_two
@@ -1053,9 +1053,9 @@ fx_arpeggio:
     ;; Multiply by 2 to get offset into table
     add a
 
-    add a, LOW(.arp_options)
+    add LOW(.arp_options)
     ld l, a
-    adc a, HIGH(.arp_options)
+    adc HIGH(.arp_options)
     sub l
     ld h, a
     jp hl
@@ -1224,10 +1224,9 @@ fx_toneporta:
     ld e, l
 .no_overshoot:
 
-.done:
     pop hl
     ld a, e
-    ld [hli], a
+    ld [hl+], a
     ld [hl], d
 
     ;; Do not retrigger channel
@@ -1643,7 +1642,7 @@ process_tick:
     ld a, [order_cnt]
     ld c, a
     ld a, [current_order]
-    add a, 2
+    add 2
     cp c
     jr nz, .update_current_order
     xor a

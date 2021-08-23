@@ -28,3 +28,5 @@
   - Register and flag names must be uppercase.
 
 - `hl+` and `hl-`, not `hli` and `hld`.
+
+- Instructions using A as implicit left-hand operand (`add`, `adc`, `sub`, `sbc`, `cp`, `and`, `or`, `xor`) must not specify A.
