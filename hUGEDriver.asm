@@ -2,19 +2,11 @@ include "include/hardware.inc"
 include "include/hUGE.inc"
 
 add_a_to_r16: MACRO
-    add \2
-    ld \2, a
-    adc \1
-    sub \2
-    ld \1, a
-ENDM
-
-add_a_to_hl: MACRO
-    add_a_to_r16 h, l
-ENDM
-
-add_a_to_de: MACRO
-    add_a_to_r16 d, e
+    add LOW(\1)
+    ld LOW(\1), a
+    adc HIGH(\1)
+    sub LOW(\1)
+    ld HIGH(\1), a
 ENDM
 
 ret_dont_call_playnote: MACRO
@@ -1217,7 +1209,7 @@ fx_toneporta:
 
     ;; Do not retrigger channel
     ld a, 6
-    add_a_to_hl
+    add_a_to_r16 hl
     ld a, [hl]
     res 7, [hl]
     ;; B must be preserved for this
@@ -1267,7 +1259,7 @@ setup_instrument_pointer:
     add a
     add a
 
-    add_a_to_de
+    add_a_to_r16 de
 
     rla ; reset the Z flag
     ret
