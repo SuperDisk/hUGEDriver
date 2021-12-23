@@ -30,7 +30,7 @@ ENDM
 ;; Maximum pattern length
 PATTERN_LENGTH EQU 64
 ;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 3
+CHANNEL_SIZE_EXPONENT EQU 4
 
 SECTION "Playback variables", WRAM0
 ;; Active song descriptor
@@ -91,6 +91,9 @@ channel_note1: db
 vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
+table1: db
+table_row1: db
+ds 6
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -102,6 +105,9 @@ channel_note2: db
 vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
+table2: db
+table_row2: db
+ds 6
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -113,6 +119,9 @@ channel_note3: db
 vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
+table3: db
+table_row3: db
+ds 6
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -124,6 +133,9 @@ channel_note4: db
 vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
+table4: db
+table_row4: db
+ds 6
 
 end_zero:
 
@@ -304,7 +316,7 @@ get_current_note:
 ;;; Return: CF = 1
 ;;; Destroy: AF
 get_note_period:
-    add a ;; double it to get index into hi/lo table
+    add a ; double it to get index into hi/lo table
     add LOW(note_table)
     ld l, a
     adc HIGH(note_table)
@@ -1043,7 +1055,7 @@ fx_toneporta:
     ;; B must be preserved for this
     jp update_channel_freq
 
-.setup
+.setup:
     ;; We're on tick zero, so load the note period into the toneporta target.
     ld d, 4
     call ptr_to_channel_member
@@ -1233,7 +1245,7 @@ hUGE_dosound::
     ld [channel_period1], a
     ld a, h
     ld [channel_period1+1], a
-.toneporta
+.toneporta:
 
     ld hl, duty_instruments
     ld a, [hl+]
@@ -1284,7 +1296,7 @@ process_ch2:
     ld [channel_period2], a
     ld a, h
     ld [channel_period2+1], a
-.toneporta
+.toneporta:
 
     ld hl, duty_instruments
     ld a, [hl+]
@@ -1332,7 +1344,7 @@ process_ch3:
     ld [channel_period3], a
     ld a, h
     ld [channel_period3+1], a
-.toneporta
+.toneporta:
 
     ld hl, wave_instruments
     ld a, [hl+]
