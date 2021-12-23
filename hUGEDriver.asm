@@ -1179,28 +1179,6 @@ play_note:
     jp hl
 
 
-
-;; TODO: Find some way to de-duplicate this code!
-;;; Computes the pointer to a CH4 instrument.
-;;; Param: B = The instrument's ID
-;;; Param: DE = Instrument pointer table
-;;; Return: DE = Pointer to the instrument
-;;; Return: ZF = Set if and only if there was no instrument (ID == 0)
-;;; Destroy: AF
-setup_instrument_pointer_ch4:
-    ;; Call with:
-    ;; Instrument/High nibble of effect in B
-    ;; Stores whether the instrument was real in the Z flag
-    ;; Stores the instrument pointer in DE
-    ld a, b
-    and %11110000
-    swap a
-    ret z ; If there's no instrument, then return early.
-
-    dec a ; Instrument 0 is "no instrument"
-    add a
-    jr setup_instrument_pointer.finish
-
 ;;; Computes the pointer to an instrument.
 ;;; Param: B = The instrument's ID
 ;;; Param: DE = Instrument pointer table
@@ -1219,7 +1197,8 @@ setup_instrument_pointer:
 
     dec a ; Instrument 0 is "no instrument"
 .finish:
-    ;; Shift left twice to multiply by 4
+    ;; Shift left thrice to multiply by 8
+    add a
     add a
     add a
 
@@ -1432,7 +1411,7 @@ process_ch4:
     call get_note_poly
     ld [channel_period4], a
 
-    ld de, 0
+    load_de_ind noise_instruments
     call setup_instrument_pointer
 
     ld a, [highmask4]
@@ -1441,29 +1420,23 @@ process_ch4:
 
     checkMute 3, .do_setvol4
 
-    ld hl, noise_instruments
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-    sla e
-    add hl, de
-
-    ld a, [hl+]
+    ld a, [de]
+    inc de
     ldh [rAUD4ENV], a
 
-    ld a, [hl]
+    ld a, [de]
     and %00111111
     ldh [rAUD4LEN], a
 
     ld a, [channel_period4]
-    ld d, a
-    ld a, [hl]
+    ld h, a
+    ld a, [de]
     and %10000000
     swap a
-    or d
+    or h
     ld [channel_period4], a
 
-    ld a, [hl]
+    ld a, [de]
     and %01000000
     or  %10000000
 .write_mask4:
@@ -1541,7 +1514,7 @@ process_effects:
     ld h, a
 
     load_de_ind noise_instruments
-    call setup_instrument_pointer_ch4
+    call setup_instrument_pointer
     jr z, .done_macro ; No instrument, thus no macro
 
     ld a, [tick]
