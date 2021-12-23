@@ -1521,39 +1521,7 @@ process_effects:
     ld c, a
     ld b, [hl]
     call get_current_row
-    cp LAST_NOTE
-    jr nc, .done_macro
-    ld h, a
 
-    load_de_ind noise_instruments
-    call setup_instrument_pointer
-    jr z, .done_macro ; No instrument, thus no macro
-
-    ld a, [tick]
-    cp 7
-    jr nc, .done_macro
-
-    inc de
-
-    ld l, a
-    ld a, h
-    ld h, 0
-    add hl, de
-    add [hl]
-    call get_note_poly
-    ld l, a
-    ld a, [de]
-    ld e, a
-    and %10000000
-    swap a
-    or l
-    ldh [rAUD4POLY], a
-
-    ld a, e
-    and %01000000
-    ldh [rAUD4GO], a
-
-.done_macro:
     ld a, c
     or a
     jr z, .after_effect4
