@@ -609,7 +609,7 @@ begin
                                      else Writeln(F, Format('A _CODE_%d size %x flags 0 addr 0', [max(DefaultBank, Section.Bank), Section.Size]));
           else  Writeln(F, Format('A _DATA size %x flags 0 addr 0', [Section.Size]));
         end
-      else Die('absolute sections currently unsupported: %s', [Section.Name]);
+      else Die('Absolute sections currently unsupported: %s', [Section.Name]);
 
       for Symbol in RObj.Symbols do
         if Symbol.SectionID = Section.ID then
@@ -630,11 +630,44 @@ begin
         if (Section.Org <> -1) then Inc(WritePos, Section.Org);
 
         if FindPatch(Section, I, Patch) then begin
+          RPN := ParseRPN(Patch.RPN);
           case Patch.PatchType of
+            PATCH_BYTE    : begin
+                              if ((Length(RPN) = 3) and
+                                 ((RPN[1].Tag <> rpnInteger) or
+                                  (RPN[2].Tag <> rpnAnd)))
+                                 or
+                                 ((Length(RPN) = 5) and
+                                 ((RPN[1].Tag <> rpnInteger) or
+                                  (RPN[2].Tag <> rpnShr) or
+                                  (RPN[3].Tag <> rpnInteger) or
+                                  (RPN[4].Tag <> rpnAnd)))
+                                 or (not (Length(RPN) in [3, 5]))
+                                 then
+                                  Die('Unsupported RPN expression in byte patch');
+
+                              Symbol := RObj.Symbols[RPN[0].SymbolID];
+                              if Length(RPN) = 3 then begin // LSB
+                                Writeln(F, Format('T %.2x %.2x 00 %.2x %.2x 00', [lo(WritePos), hi(WritePos), lo(Symbol.Value), hi(Symbol.Value)]));
+                                Writeln(F, Format('R 00 00 %.2x %.2x 09 03 %.2x %.2x', [lo(Sct), hi(Sct), lo(Symbol.SectionID), hi(Symbol.SectionID)]));
+                              end
+                              else if Length(RPN) = 5 then begin // MSB
+                                Writeln(F, Format('T %.2x %.2x 00 %.2x %.2x 00', [lo(WritePos), hi(WritePos), lo(Symbol.Value), hi(Symbol.Value)]));
+                                Writeln(F, Format('R 00 00 %.2x %.2x 89 03 %.2x %.2x', [lo(Sct), hi(Sct), lo(Symbol.SectionID), hi(Symbol.SectionID)]));
+                              end;
+                              Inc(I);
+                            end;
             PATCH_LE_WORD : begin
-                              RPN := ParseRPN(Patch.RPN);
                               Symbol := RObj.Symbols[RPN[0].SymbolID];
                               ValueToWrite := Symbol.Value;
+
+                              if ((Length(RPN) = 3) and
+                                 ((RPN[1].Tag <> rpnInteger) or
+                                  (RPN[2].Tag <> rpnPlus)))
+                                 or (not (Length(RPN) in [1, 3]))
+                              then
+                               Die('Unsupported RPN expression in word patch');
+
                               if RPN[High(RPN)].Tag = rpnPlus then
                                 Inc(ValueToWrite, RPN[1].IntValue);
 
@@ -649,8 +682,7 @@ begin
                               Inc(I, 2);
                             end;
             PATCH_JR      : begin
-                              RPN := ParseRPN(Patch.RPN);
-                              if Length(RPN) > 1 then Die('Not handling bigger RPN on JR');
+                              if Length(RPN) <> 1 then Die('Unsupported RPN expression in JR patch');
                               Symbol := RObj.Symbols[RPN[0].SymbolID];
                               Writeln(F, Format('T %.2x %.2x 00 %.2x', [lo(WritePos), hi(WritePos), Byte(Symbol.Value - I - 1)]));
                               Writeln(F, Format('R 00 00 %.2x %.2x', [lo(Sct), hi(Sct)]));
