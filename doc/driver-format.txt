@@ -11,6 +11,19 @@ E = Effect code
 X = Effect param 1
 Y = Effect param 2
 
+A hUGEDriver table is a series of 16 rows in this format:
+
+  Note     Instr    Effect
+NNNNNNNN, IIIIEEEE, XXXXYYYY
+
+where
+
+N = Note code
+I = Jump number
+E = Effect code
+X = Effect param 1
+Y = Effect param 2
+
 If the note code is greater than 71 then it's considered to be an empty note cell.
 
 00 is an empty instrument cell.

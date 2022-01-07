@@ -1219,7 +1219,6 @@ setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
-
 _hUGE_dosound_banked::
 _hUGE_dosound::
 ;;; Ticks the sound engine once.
