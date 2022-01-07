@@ -340,8 +340,11 @@ get_current_note:
 ;;; Destroy: AF
 get_note_period:
     add a ;; double it to get index into hi/lo table
-    ld hl, note_table
-    add_a_to_hl
+    add LOW(note_table)
+    ld l, a
+    adc HIGH(note_table)
+    sub l
+    ld h, a
     ld a, [hl+]
     ld h, [hl]
     ld l, a
@@ -401,7 +404,11 @@ REPT CHANNEL_SIZE_EXPONENT
 ENDR
     add d
     ld hl, channels
-    add_a_to_hl
+    add LOW(channels)
+    ld l, a
+    adc HIGH(channels)
+    sub l
+    ld h, a
     ret
 
 
@@ -564,8 +571,11 @@ do_effect:
     ;; Multiply by 2 to get offset into table
     add a
 
-    ld hl, .jump
-    add_a_to_hl
+    add LOW(.jump)
+    ld l, a
+    adc HIGH(.jump)
+    sub l
+    ld h, a
 
     ld a, [hl+]
     ld h, [hl]
@@ -809,8 +819,11 @@ play_note:
 
     ld a, b
     add a
-    ld hl, play_note_routines
-    add_a_to_hl
+    add LOW(play_note_routines)
+    ld l, a
+    adc HIGH(play_note_routines)
+    sub l
+    ld h, a
     jp hl
 
 
@@ -1040,8 +1053,11 @@ fx_arpeggio:
     ;; Multiply by 2 to get offset into table
     add a
 
-    ld hl, .arp_options
-    add_a_to_hl
+    add LOW(.arp_options)
+    ld l, a
+    adc HIGH(.arp_options)
+    sub l
+    ld h, a
     jp hl
 
 .arp_options:
