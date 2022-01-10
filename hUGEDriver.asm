@@ -403,7 +403,6 @@ REPT CHANNEL_SIZE_EXPONENT
     add a
 ENDR
     add d
-    ld hl, channels
     add LOW(channels)
     ld l, a
     adc HIGH(channels)
