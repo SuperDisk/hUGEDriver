@@ -286,7 +286,7 @@ hUGE_mute_channel::
 
 ;;; Reads a pattern's current row.
 ;;; Param: BC = Pointer to the pattern
-;;; Param: [row] = Index of the current ro<
+;;; Param: [row] = Index of the current row
 ;;; Return: A = Note ID
 ;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
 ;;; Return: C = Effect parameter
