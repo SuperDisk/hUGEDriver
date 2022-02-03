@@ -105,6 +105,7 @@ hUGE_NO_WAVE equ 100
 ;; Everything between this and `end_zero` is zero-initialized by `hUGE_init`
 start_zero:
 
+_hUGE_mute_mask::
 mute_channels: db
 current_order: db
 next_order: db
