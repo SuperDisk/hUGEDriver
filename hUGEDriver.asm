@@ -86,6 +86,13 @@ routines: dw
 waves: dw
 _end_song_descriptor_pointers:
 
+;; Buffers for decompressing the pattern data into
+
+pattern1_buf: ds (3 * PATTERN_LENGTH)
+pattern2_buf: ds (3 * PATTERN_LENGTH)
+pattern3_buf: ds (3 * PATTERN_LENGTH)
+pattern4_buf: ds (3 * PATTERN_LENGTH)
+
 ;; Pointers to the current patterns (sort of a cache)
 pattern1: dw
 pattern2: dw
@@ -219,41 +226,54 @@ ENDC
     ;; fallthrough (load the pattern pointers)
 
 ;;; Sets all 4 pattern pointers from a certain index in the respective 4 orders.
-;;; Param: C = The index (in increments of 2)
+;;; Param: H = The index (in increments of 2)
 ;;; Destroy: AF DE HL
 load_patterns:
 IF DEF(PREVIEW_MODE)
     db $fc ; signal order update to tracker
 ENDC
+    push bc
+    push bc
+    push bc
+    push bc
 
+    pop de
     ld hl, order1
-    ld de, pattern1
+    ld bc, pattern1_buf
     call .load_pattern
 
+    pop de
     ld hl, order2
+    ld bc, pattern2_buf
     call .load_pattern
 
+    pop de
     ld hl, order3
+    ld bc, pattern3_buf
     call .load_pattern
 
+    pop de
     ld hl, order4
-    ;; fallthrough
+    ld bc, pattern4_buf
+    call .load_pattern
+
+    ret
 
 .load_pattern:
     ld a, [hl+]
-    add c
+    add e
     ld h, [hl]
     ld l, a
     adc h
     sub l
     ld h, a
 
-    ld a, [hl+]
-    ld [de], a
-    inc de
-    ld a, [hl]
-    ld [de], a
-    inc de
+    ld e, [hl]
+    inc hl
+    ld d, [hl]
+
+    call UNAPACK
+
     ret
 
 
@@ -318,10 +338,6 @@ get_current_row:
 ;;; Return: C = Effect parameter
 ;;; Destroy: AF
 get_current_note:
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
-
     call get_current_row
     ld hl, 0
 
@@ -1300,7 +1316,7 @@ hUGE_dosound::
     jp nz, process_effects
 
     ;; Note playback
-    ld hl, pattern1
+    ld bc, pattern1_buf
     ld de, channel_note1
     call get_current_note
     push af
@@ -1342,7 +1358,7 @@ hUGE_dosound::
 
 process_ch2:
     ;; Note playback
-    ld hl, pattern2
+    ld bc, pattern2_buf
     ld de, channel_note2
     call get_current_note
     push af
@@ -1381,7 +1397,7 @@ process_ch2:
     call c, play_ch2_note
 
 process_ch3:
-    ld hl, pattern3
+    ld bc, pattern3_buf
     ld de, channel_note3
     call get_current_note
 
@@ -1444,10 +1460,7 @@ ENDR
     call c, play_ch3_note
 
 process_ch4:
-    ld hl, pattern4
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
+    ld bc, pattern4_buf
     call get_current_row
     ld [channel_note4], a
     cp LAST_NOTE
@@ -1505,10 +1518,7 @@ process_effects:
     ;; Only do effects if not on tick zero
     checkMute 0, .after_effect1
 
-    ld hl, pattern1
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
+    ld bc, pattern1_buf
     call get_current_row
 
     ld a, c
@@ -1521,10 +1531,7 @@ process_effects:
 .after_effect1:
     checkMute 1, .after_effect2
 
-    ld hl, pattern2
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
+    ld bc, pattern2_buf
     call get_current_row
 
     ld a, c
@@ -1537,10 +1544,7 @@ process_effects:
 .after_effect2:
     checkMute 2, .after_effect3
 
-    ld hl, pattern3
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
+    ld bc, pattern3_buf
     call get_current_row
 
     ld a, c
@@ -1553,10 +1557,7 @@ process_effects:
 .after_effect3:
     checkMute 3, .after_effect4
 
-    ld hl, pattern4
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
+    ld bc, pattern4_buf
     call get_current_row
     cp LAST_NOTE
     jr nc, .done_macro
@@ -1668,7 +1669,9 @@ process_tick:
     ;; B: The row for the order to start on
     ld [current_order], a
     ld c, a
+    push bc
     call load_patterns
+    pop bc
 
 .noreset:
     ld a, b
