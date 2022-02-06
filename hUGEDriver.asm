@@ -255,9 +255,7 @@ ENDC
     pop de
     ld hl, order4
     ld bc, pattern4_buf
-    call .load_pattern
-
-    ret
+    ;; fallthrough
 
 .load_pattern:
     ld a, [hl+]
@@ -272,7 +270,12 @@ ENDC
     inc hl
     ld d, [hl]
 
-    call UNAPACK
+    ld h, d
+    ld l, e
+    ld d, b
+    ld e, c
+
+    call uncap
 
     ret
 
