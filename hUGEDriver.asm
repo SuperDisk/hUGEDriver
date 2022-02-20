@@ -1214,7 +1214,7 @@ setup_instrument_pointer:
     add a
     add a
 
-    add_a_to_r16 de
+    add_a_to_r16 hl
 
     rla ; reset the Z flag
     ret
@@ -1248,8 +1248,8 @@ hUGE_dosound::
 
     ld hl, duty_instruments
     ld a, [hl+]
-    ld d, [hl]
-    ld e, a
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
     ld a, [highmask1]
     res 7, a ; Turn off the "initial" flag
@@ -1257,16 +1257,15 @@ hUGE_dosound::
 
     checkMute 0, .do_setvol1
 
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD1SWEEP], a
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD1LEN], a
-    ld a, [de]
+    ld a, [hl+]
     ldh [rAUD1ENV], a
-    inc de
-    ld a, [de]
+    ld a, [hl+]
+    ; ld [table1], a
+    ; ld a, [hl]
 
 .write_mask1:
     ld [highmask1], a
@@ -1299,8 +1298,8 @@ process_ch2:
 
     ld hl, duty_instruments
     ld a, [hl+]
-    ld d, [hl]
-    ld e, a
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
     ld a, [highmask2]
     res 7, a ; Turn off the "initial" flag
@@ -1308,14 +1307,15 @@ process_ch2:
 
     checkMute 1, .do_setvol2
 
-    inc de
-    ld a, [de]
-    inc de
+    inc hl
+
+    ld a, [hl+]
     ldh [rAUD2LEN], a
-    ld a, [de]
+    ld a, [hl+]
     ldh [rAUD2ENV], a
-    inc de
-    ld a, [de]
+    ld a, [hl+]
+    ; ld [table2], a
+    ; ld a, [hl]
 
 .write_mask2:
     ld [highmask2], a
@@ -1347,8 +1347,8 @@ process_ch3:
 
     ld hl, wave_instruments
     ld a, [hl+]
-    ld d, [hl]
-    ld e, a
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
@@ -1356,14 +1356,12 @@ process_ch3:
 
     checkMute 2, .do_setvol3
 
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD3LEN], a
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD3LEVEL], a
-    ld a, [de]
-    inc de
+    ld a, [hl+]
+    push hl
 
     ;; Check to see if we need to copy the wave
     ld hl, current_wave
@@ -1393,7 +1391,8 @@ ENDR
     ldh [rAUD3ENA], a
 
 .no_wave_copy:
-    ld a, [de]
+    pop hl
+    ld a, [hl]
 
 .write_mask3:
     ld [highmask3], a
@@ -1422,8 +1421,13 @@ process_ch4:
     call get_note_poly
     ld [channel_period4], a
 
-    load_de_ind noise_instruments
+    ld hl, noise_instruments
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
+    ld d, h
+    ld e, l
 
     ld a, [highmask4]
     res 7, a ; Turn off the "initial" flag
