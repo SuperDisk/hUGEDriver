@@ -1264,8 +1264,8 @@ hUGE_dosound::
     ld a, [hl+]
     ldh [rAUD1ENV], a
     ld a, [hl+]
-    ; ld [table1], a
-    ; ld a, [hl]
+    ld [table1], a
+    ld a, [hl]
 
 .write_mask1:
     ld [highmask1], a
@@ -1314,8 +1314,8 @@ process_ch2:
     ld a, [hl+]
     ldh [rAUD2ENV], a
     ld a, [hl+]
-    ; ld [table2], a
-    ; ld a, [hl]
+    ld [table2], a
+    ld a, [hl]
 
 .write_mask2:
     ld [highmask2], a
@@ -1333,7 +1333,7 @@ process_ch3:
     call get_current_note
 
     push af ; Save carry for conditonally calling note
-    jr nc, .do_setvol3
+    jp nc, .do_setvol3
 
     ld a, b
     and $0F
@@ -1392,6 +1392,8 @@ ENDR
 
 .no_wave_copy:
     pop hl
+    ld a, [hl+]
+    ld [table3], a
     ld a, [hl]
 
 .write_mask3:
@@ -1426,8 +1428,6 @@ process_ch4:
     ld h, [hl]
     ld l, a
     call setup_instrument_pointer
-    ld d, h
-    ld e, l
 
     ld a, [highmask4]
     res 7, a ; Turn off the "initial" flag
@@ -1435,23 +1435,25 @@ process_ch4:
 
     checkMute 3, .do_setvol4
 
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD4ENV], a
 
-    ld a, [de]
+    ld a, [hl+]
+    ld [table4], a
+
+    ld a, [hl]
     and %00111111
     ldh [rAUD4LEN], a
 
     ld a, [channel_period4]
-    ld h, a
-    ld a, [de]
+    ld d, a
+    ld a, [hl]
     and %10000000
     swap a
-    or h
+    or d
     ld [channel_period4], a
 
-    ld a, [de]
+    ld a, [hl]
     and %01000000
     or  %10000000
 .write_mask4:
