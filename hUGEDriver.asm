@@ -263,13 +263,14 @@ hUGE_mute_channel::
 
 ;;; Reads a pattern's current row.
 ;;; Param: BC = Pointer to the pattern
-;;; Param: [row] = Index of the current ro<
+;;; Param: [row] = Index of the current row
 ;;; Return: A = Note ID
 ;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
 ;;; Return: C = Effect parameter
 ;;; Destroy: HL
 get_current_row:
     ld a, [row]
+.row_in_a:
     ld h, a
     ;; Multiply by 3 for the note value
     add h
@@ -522,6 +523,26 @@ play_ch4_note:
 
     ret
 
+;;; Executes a row of a table.
+;;; Param: D = Index to which table to run
+;;; Param: A = Which row the table is on
+;;; Param: E = Which channel to run the table on
+do_table:
+    ld bc, tables
+    ;; todo: add d to tables
+
+    call get_current_row.row_in_a
+    push bc
+    ld b, e
+    ld e, a
+    ld d, 4
+    call ptr_to_channel_member
+    ld a, e
+    add [hl]
+    ;; A = note index
+    ;; B = channel
+    ;; pushed = instrument/effect
+    ;;
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -863,7 +884,7 @@ fx_vibrato:
     jp update_channel_freq
 
 
-;;; Processes effect 8, "arpeggio".
+;;; Processes effect 0, "arpeggio".
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
 ;;; Param: C = Offsets in semitones (each nibble)
 ;;; Param: ZF = Set if and only if on tick 0
@@ -1271,6 +1292,12 @@ hUGE_dosound::
     ld [highmask1], a
 
 .do_setvol1:
+    ld a, [table1]
+    ld d, a
+    ld a, [table_row1]
+    ld e, 0
+    call do_table
+
     ld e, 0
     call do_effect
 
