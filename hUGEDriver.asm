@@ -542,7 +542,17 @@ do_table:
     ;; A = note index
     ;; B = channel
     ;; pushed = instrument/effect
-    ;;
+
+    ;; TODO: get note poly for ch4 instead
+    call get_note_period
+    ld d, h
+    ld e, l
+    xor a
+    call update_channel_freq
+
+    ld e, b
+    pop bc
+    call do_effect
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -1292,12 +1302,14 @@ hUGE_dosound::
     ld [highmask1], a
 
 .do_setvol1:
+    push bc
     ld a, [table1]
     ld d, a
     ld a, [table_row1]
     ld e, 0
     call do_table
 
+    pop bc
     ld e, 0
     call do_effect
 
