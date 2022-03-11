@@ -653,6 +653,19 @@ IF DEF(GBDK) ; Pass the tick counter as a SDCC call parameter
 
 .call_hl:
 ENDC
+IF DEF(SDCC_FAST) ; Pass the tick counter as a SDCC call parameter
+; param in a
+; ch in e
+; tick in stack
+; callee cleans stack
+    pop de
+    push af
+    inc sp
+    push de
+
+    ld e, b
+    ld a, c
+ENDC
     jp hl
 
 
@@ -1683,6 +1696,29 @@ ENDC
 note_table:
 include "include/hUGE_note_table.inc"
 
+IF DEF(SDCC_FAST)
+SECTION "hUGEDriver GBDK wrappers", ROM0
+; for SDCC 4.2.0's new calling convention
+; no preservance of bc (doesn't even work in 4.1.0 and 4.2.0)
+; current dosound corrupts bc anyways
+_hUGE_init_fast::
+    ; song in de
+    ld h, d
+    ld l, e
+    jp hUGE_init
+
+_hUGE_mute_channel_fast::
+    ; ch in a
+    ; mute in e
+    ld b, a
+    ld c, e
+    jp hUGE_mute_channel
+
+_hUGE_set_position_banked_fast::
+    ; pattern in a
+    ld c, a
+    jp hUGE_set_position
+ENDC
 
 IF DEF(GBDK)
 
