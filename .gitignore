@@ -10,6 +10,13 @@ obj/
 *.exe
 *.bak
 
+*.lk
+*.lst
+*.noi
+*.ihx
+*.rel
+sdcc_4.2.0_example/*.asm
+
 rgbasm
 rgbfix
 rgblink
