@@ -1428,7 +1428,7 @@ FOR OFS, 16
     ldh [_AUD3WAVERAM + OFS], a
 ENDR
 
-    ld a, %10000000
+    ld a, %11000000
     ldh [rAUD3ENA], a
 
 .no_wave_copy:
