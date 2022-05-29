@@ -528,23 +528,42 @@ play_ch4_note:
 
 ;;; Executes a row of a table.
 ;;; Param: BC = Pointer to which table to run
-;;; Param: A = Which row the table is on
+;;; Param: [HL] = Which row the table is on
 ;;; Param: E = Which channel to run the table on
 do_table:
-    ; add_a_to_r16 bc
+    ;; Increment the current row
+    ld a, [hl]
+    inc [hl]
+    push hl
 
-    ;; Grab the cell values, return if no note
+    ;; Grab the cell values, return if no note.
+    ;; Save BC for doing effects.
     call get_current_row.row_in_a
-    cp LAST_NOTE
-    ret nc
-
+    pop hl ; TODO: don't trash HL in the first place
     push bc
+    push af
+
+    ;; If there's a jump, change the current row
+    ld a, b
+    and $F0
+    swap a
+    jr z, .no_jump
+    dec a
+    ld [hl], a
+
+.no_jump:
+    pop af
+    ;; If there's no note, don't update channel frequencies
+    cp LAST_NOTE
+    jr nc, .no_note
+
     ld b, e
     ld e, a
     ld d, 4
     call ptr_to_channel_member
     ld a, e
     add [hl]
+    ; ld [hl], a
     ;; A = note index
     ;; B = channel
     ;; pushed = instrument/effect
@@ -553,13 +572,13 @@ do_table:
     call get_note_period
     ld d, h
     ld e, l
-    xor a
     call update_channel_freq
 
-    ; ld e, b
+.no_note:
+    ld e, b
+    ld e, 0
     pop bc
-    ; call do_effect
-    ret
+    ;; Fall through to do_effect
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -567,6 +586,11 @@ do_table:
 ;;; Param: C = Effect parameters (depend on FX type)
 ;;; Destroy: AF BC DE HL
 do_effect:
+    ;; Return immediately if effect is 000
+    ld a, b
+    or c
+    ret z
+
     ;; Strip the instrument bits off leaving only effect code
     ld a, b
     and %00001111
@@ -1322,7 +1346,7 @@ hUGE_dosound::
     ld a, [table1+1]
     ld b, a
     or c
-    ld a, [table_row1]
+    ld hl, table_row1
     ld e, 0
     call nz, do_table
 
@@ -1542,6 +1566,15 @@ process_effects:
     call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect1:
+    ld a, [table1]
+    ld c, a
+    ld a, [table1+1]
+    ld b, a
+    or c
+    ld hl, table_row1
+    ld e, 0
+    call nz, do_table
+
     checkMute 1, .after_effect2
 
     ld hl, pattern2
