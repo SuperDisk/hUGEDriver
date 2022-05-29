@@ -1,6 +1,9 @@
 include "include/hardware.inc"
 include "include/hUGE.inc"
 
+PURGE PREVIEW_MODE
+; PREVIEW_MODE equ ""
+
 add_a_to_r16: MACRO
     add LOW(\1)
     ld LOW(\1), a
@@ -528,7 +531,13 @@ play_ch4_note:
 ;;; Param: A = Which row the table is on
 ;;; Param: E = Which channel to run the table on
 do_table:
+    ; add_a_to_r16 bc
+
+    ;; Grab the cell values, return if no note
     call get_current_row.row_in_a
+    cp LAST_NOTE
+    ret nc
+
     push bc
     ld b, e
     ld e, a
@@ -547,9 +556,10 @@ do_table:
     xor a
     call update_channel_freq
 
-    ld e, b
+    ; ld e, b
     pop bc
-    call do_effect
+    ; call do_effect
+    ret
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -1301,7 +1311,12 @@ hUGE_dosound::
     ld [highmask1], a
 
 .do_setvol1:
-    push bc
+    ld e, 0
+    call do_effect
+
+    pop af
+    call c, play_ch1_note
+
     ld a, [table1]
     ld c, a
     ld a, [table1+1]
@@ -1310,13 +1325,6 @@ hUGE_dosound::
     ld a, [table_row1]
     ld e, 0
     call nz, do_table
-
-    pop bc
-    ld e, 0
-    call do_effect
-
-    pop af
-    call c, play_ch1_note
 
 process_ch2:
     ;; Note playback
