@@ -91,9 +91,9 @@ channel_note1: db
 vibrato_tremolo_phase1: db
 envelope1: db
 highmask1: db
-table1: db
+table1: dw
 table_row1: db
-ds 6
+ds 5
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -105,9 +105,9 @@ channel_note2: db
 vibrato_tremolo_phase2: db
 envelope2: db
 highmask2: db
-table2: db
+table2: dw
 table_row2: db
-ds 6
+ds 5
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -119,9 +119,9 @@ channel_note3: db
 vibrato_tremolo_phase3: db
 envelope3: db
 highmask3: db
-table3: db
+table3: dw
 table_row3: db
-ds 6
+ds 5
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -133,9 +133,9 @@ channel_note4: db
 vibrato_tremolo_phase4: db
 envelope4: db
 highmask4: db
-table4: db
+table4: dw
 table_row4: db
-ds 6
+ds 5
 
 end_zero:
 
@@ -524,13 +524,10 @@ play_ch4_note:
     ret
 
 ;;; Executes a row of a table.
-;;; Param: D = Index to which table to run
+;;; Param: BC = Pointer to which table to run
 ;;; Param: A = Which row the table is on
 ;;; Param: E = Which channel to run the table on
 do_table:
-    ld bc, tables
-    ;; todo: add d to tables
-
     call get_current_row.row_in_a
     push bc
     ld b, e
@@ -1296,6 +1293,8 @@ hUGE_dosound::
     ldh [rAUD1ENV], a
     ld a, [hl+]
     ld [table1], a
+    ld a, [hl+]
+    ld [table1+1], a
     ld a, [hl]
 
 .write_mask1:
@@ -1304,10 +1303,13 @@ hUGE_dosound::
 .do_setvol1:
     push bc
     ld a, [table1]
-    ld d, a
+    ld c, a
+    ld a, [table1+1]
+    ld b, a
+    or c
     ld a, [table_row1]
     ld e, 0
-    call do_table
+    call nz, do_table
 
     pop bc
     ld e, 0
@@ -1354,6 +1356,8 @@ process_ch2:
     ldh [rAUD2ENV], a
     ld a, [hl+]
     ld [table2], a
+    ld a, [hl+]
+    ld [table2+1], a
     ld a, [hl]
 
 .write_mask2:
@@ -1433,6 +1437,8 @@ ENDR
     pop hl
     ld a, [hl+]
     ld [table3], a
+    ld a, [hl+]
+    ld [table3+1], a
     ld a, [hl]
 
 .write_mask3:
@@ -1479,6 +1485,8 @@ process_ch4:
 
     ld a, [hl+]
     ld [table4], a
+    ld a, [hl+]
+    ld [table4+1], a
 
     ld a, [hl]
     and %00111111
