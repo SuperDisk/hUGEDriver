@@ -17,6 +17,16 @@ add_a_to_de: MACRO
     add_a_to_r16 d, e
 ENDM
 
+;; Thanks PinoBatch!
+sub_from_r16: MACRO ;; (high, low, value)
+    ld a, \2
+    sub \3
+    ld \2, a
+    sbc a  ; A = -1 if borrow or 0 if not
+    add \1
+    ld \1, a
+ENDM
+
 ret_dont_call_playnote: MACRO
     pop hl
     pop af
@@ -1227,7 +1237,7 @@ fx_toneporta:
 .set_exact:
     ld d, h
     ld e, l
-.no_overshoot:
+.done:
 
     pop hl
     ld a, e
