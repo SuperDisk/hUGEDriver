@@ -1172,58 +1172,59 @@ fx_toneporta:
     call ptr_to_channel_member
     push hl
 
-    ;; Read current period
     ld a, [hl+]
     ld e, a
     ld a, [hl+]
     ld d, a
 
-    ;; Read target period
     ld a, [hl+]
     ld h, [hl]
     ld l, a
 
-    ;; Do we need to porta up, or down? Compute (current - target) and check carry to know
-    sub e
+    ;; Comparing which direction to move the current value
+    ;; TODO: Optimize this!!!!
+
+    ;; Compare high byte
     ld a, h
-    sbc d
-    jr c, .porta_down ; Current period (DE) is higher than target one (HL), so down we go!
 
-    ;; Add offset to current freq
-    ld a, e
-    add c
-    ld e, a
-    adc d
-    sub e
-    ld d, a
-    ;; We don't need to worry about overflow given the relatively low values we work with
-
-    ld c, 0 ; The overshoot comparison should yield no carry, like the above one
-    jr .check_overshoot
-
-.porta_down:
-    ;; Subtract offset from current freq
-    ld a, e
-    sub c
-    ld e, a
-    sbc a
-    add d
-    ld d, a
-    jr c, .overshot ; There will be no underflows under my watch!
-
-    ld c, $FF ; The overshoot comparison should yield carry, like the above one
-
-.check_overshoot:
+    cp d
+    jr c, .subtract ; target is less than the current period
+    jr nz, .add
+.high_byte_same:
     ld a, l
-    sub e
+    cp e
+    jr c, .subtract ; the target is less than the current period
+    jr z, .done ; both nibbles are the same so no portamento
+.add:
+    ld a, c
+    add_a_to_de
+
     ld a, h
-    sbc d
-    rra ; Shift carry into bit 7
-    xor c ; XOR it with provided value
-    rla ; Shift maybe-toggled carry back
-    jr nc, .no_overshoot
-.overshot:
-    ;; Override computed new period with target
+    cp d
+    jr c, .set_exact
+    jr nz, .done
+    ld a, l
+    cp e
+    jr c, .set_exact
+
+    jr .done
+
+.subtract:
+    sub_from_r16 d, e, c
+
+    bit 7, d ; check for overflow
+    jr nz, .set_exact
+
+    ld a, d
+    cp h
+    jr c, .set_exact
+    jr nz, .done
+    ld a, e
+    cp l
+    jr c, .set_exact
+
+    jr .done
+.set_exact:
     ld d, h
     ld e, l
 .no_overshoot:
@@ -1233,7 +1234,6 @@ fx_toneporta:
     ld [hl+], a
     ld [hl], d
 
-    ;; Do not retrigger channel
     ld a, 6
     add_a_to_hl
     ld a, [hl]
