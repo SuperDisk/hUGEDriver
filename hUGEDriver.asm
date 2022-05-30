@@ -399,16 +399,16 @@ ENDR
 ;;; Param: (ignored for CH4) A = ORed to the value written to NRx4
 ;;; Param: (for CH4) E = Note ID
 ;;; Param: (otherwise) DE = Note period
-;;; Destroy: AF B
+;;; Destroy: AF C
 ;;; Destroy: (for CH4) HL
 update_channel_freq:
-    ld c, a
+    ld c, b
     ld a, [mute_channels]
-    dec b
+    dec c
     jr z, .update_channel2
-    dec b
+    dec c
     jr z, .update_channel3
-    dec b
+    dec c
     jr z, .update_channel4
 
 .update_channel1:
@@ -573,9 +573,9 @@ do_table:
 
 .no_note:
     ld e, b
-    ld e, 0
     pop bc
     ;; Fall through to do_effect
+    ret
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -1326,6 +1326,9 @@ hUGE_dosound::
     ld [table1], a
     ld a, [hl+]
     ld [table1+1], a
+    xor a
+    ld [table_row1], a
+
     ld a, [hl]
 
 .write_mask1:
@@ -1387,6 +1390,9 @@ process_ch2:
     ld [table2], a
     ld a, [hl+]
     ld [table2+1], a
+    xor a
+    ld [table_row2], a
+
     ld a, [hl]
 
 .write_mask2:
@@ -1468,6 +1474,9 @@ ENDR
     ld [table3], a
     ld a, [hl+]
     ld [table3+1], a
+    xor a
+    ld [table_row3], a
+
     ld a, [hl]
 
 .write_mask3:
@@ -1516,6 +1525,8 @@ process_ch4:
     ld [table4], a
     ld a, [hl+]
     ld [table4+1], a
+    xor a
+    ld [table_row4], a
 
     ld a, [hl]
     and %00111111
