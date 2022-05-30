@@ -1572,6 +1572,7 @@ process_effects:
     ld e, 0
     call nz, do_table
 
+.process_ch2:
     checkMute 1, .after_effect2
 
     ld hl, pattern2
@@ -1588,6 +1589,16 @@ process_effects:
     call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect2:
+    ld a, [table2]
+    ld c, a
+    ld a, [table2+1]
+    ld b, a
+    or c
+    ld hl, table_row2
+    ld e, 1
+    call nz, do_table
+
+.process_ch3:
     checkMute 2, .after_effect3
 
     ld hl, pattern3
@@ -1604,6 +1615,16 @@ process_effects:
     call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect3:
+    ld a, [table3]
+    ld c, a
+    ld a, [table3+1]
+    ld b, a
+    or c
+    ld hl, table_row3
+    ld e, 2
+    call nz, do_table
+
+.process_ch4:
     checkMute 3, .after_effect4
 
     ld hl, pattern4
@@ -1620,6 +1641,14 @@ process_effects:
     call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect4:
+    ld a, [table4]
+    ld c, a
+    ld a, [table1+1]
+    ld b, a
+    or c
+    ld hl, table_row4
+    ld e, 3
+    call nz, do_table
 
 tick_time:
     ld hl, counter
