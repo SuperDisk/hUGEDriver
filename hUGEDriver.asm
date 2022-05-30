@@ -551,8 +551,8 @@ do_table:
 .no_jump:
     pop af
     ;; If there's no note, don't update channel frequencies
-    cp LAST_NOTE
-    jr nc, .no_note
+    cp NO_NOTE
+    jr z, .no_note
 
     ld b, e
     ld e, a
