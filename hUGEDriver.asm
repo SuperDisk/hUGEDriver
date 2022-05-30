@@ -417,7 +417,6 @@ update_channel_freq:
     ld a, e
     ldh [rAUD1LOW], a
     ld a, d
-    or c
     ldh [rAUD1HIGH], a
     ret
 
@@ -427,7 +426,6 @@ update_channel_freq:
     ld a, e
     ldh [rAUD2LOW], a
     ld a, d
-    or c
     ldh [rAUD2HIGH], a
     ret
 
@@ -437,7 +435,6 @@ update_channel_freq:
     ld a, e
     ldh [rAUD3LOW], a
     ld a, d
-    or c
     ldh [rAUD3HIGH], a
     ret
 
