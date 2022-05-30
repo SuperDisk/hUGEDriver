@@ -575,7 +575,6 @@ do_table:
     ld e, b
     pop bc
     ;; Fall through to do_effect
-    ret
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -585,12 +584,13 @@ do_table:
 do_effect:
     ;; Return immediately if effect is 000
     ld a, b
+    and $0F
     or c
     ret z
 
     ;; Strip the instrument bits off leaving only effect code
     ld a, b
-    and %00001111
+    and $0F
     ;; Multiply by 2 to get offset into table
     add a
 
