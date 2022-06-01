@@ -552,9 +552,10 @@ do_table:
     pop af
     ;; If there's no note, don't update channel frequencies
     cp NO_NOTE
-    jr z, .no_note
 
     ld b, e
+    jr z, .no_note
+
     ld e, a
     ld d, 4
     call ptr_to_channel_member
@@ -696,7 +697,7 @@ fx_set_pan:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF
 fx_set_duty:
-    ret nz
+    ; ret nz
 
     ;; $900 = 12.5%
     ;; $940 = 25%
@@ -1654,7 +1655,7 @@ process_effects:
 .after_effect4:
     ld a, [table4]
     ld c, a
-    ld a, [table1+1]
+    ld a, [table4+1]
     ld b, a
     or c
     ld hl, table_row4
