@@ -566,10 +566,15 @@ do_table:
     ;; B = channel
     ;; pushed = instrument/effect
 
-    ;; TODO: get note poly for ch4 instead
+    ;; If ch4, don't get note period (update_channel_freq gets the poly for us)
+    ld e, a
+    bit 2, b
+    jr z, .is_ch4
+
     call get_note_period
     ld d, h
     ld e, l
+.is_ch4:
     call update_channel_freq
 
 .no_note:
@@ -919,7 +924,6 @@ fx_vibrato:
     sub e
     ld d, a
 .finish_vibrato:
-    xor a
     jp update_channel_freq
 
 
@@ -980,7 +984,6 @@ fx_arpeggio:
     call get_note_period
     ld d, h
     ld e, l
-    xor a
     jp update_channel_freq
 
 
@@ -1008,7 +1011,6 @@ fx_porta_up:
     ld [hl-], a
     ld [hl], e
 
-    xor a
     jp update_channel_freq
 
 
