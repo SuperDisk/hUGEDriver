@@ -416,8 +416,10 @@ update_channel_freq:
 
     ld a, e
     ldh [rAUD1LOW], a
+    ld [channel_period1], a
     ld a, d
     ldh [rAUD1HIGH], a
+    ld [channel_period1+1], a
     ret
 
 .update_channel2:
@@ -425,8 +427,10 @@ update_channel_freq:
 
     ld a, e
     ldh [rAUD2LOW], a
+    ld [channel_period2], a
     ld a, d
     ldh [rAUD2HIGH], a
+    ld [channel_period2+1], a
     ret
 
 .update_channel3:
@@ -434,8 +438,10 @@ update_channel_freq:
 
     ld a, e
     ldh [rAUD3LOW], a
+    ld [channel_period3], a
     ld a, d
     ldh [rAUD3HIGH], a
+    ld [channel_period3+1], a
     ret
 
 .update_channel4:
@@ -568,6 +574,7 @@ do_table:
 
     ;; If ch4, don't get note period (update_channel_freq gets the poly for us)
     ld e, a
+    inc b
     bit 2, b
     jr nz, .is_ch4
 
@@ -575,12 +582,24 @@ do_table:
     ld d, h
     ld e, l
 .is_ch4:
+    dec b
     call update_channel_freq
 
 .no_note:
     ld e, b
     pop bc
     ;; Fall through to do_effect
+
+
+do_effect_table:
+;;; Performs an effect on a given channel, but always
+;;; "does what you want" AKA doesn't skip doing things
+;;; if we're not on tick zero.
+
+;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: B = Effect type (upper 4 bits ignored)
+;;; Param: C = Effect parameters (depend on FX type)
+;;; Destroy: AF BC DE HL
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -1576,6 +1595,7 @@ process_effects:
     ld e, 0
     call do_effect      ; make sure we never return with ret_dont_play_note!!
 
+;; TODO: Deduplicate this code by moving it into do_table?
 .after_effect1:
     ld a, [table1]
     ld c, a
