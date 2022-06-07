@@ -569,7 +569,7 @@ do_table:
     ;; If ch4, don't get note period (update_channel_freq gets the poly for us)
     ld e, a
     bit 2, b
-    jr z, .is_ch4
+    jr nz, .is_ch4
 
     call get_note_period
     ld d, h
