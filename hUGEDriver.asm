@@ -1517,11 +1517,12 @@ process_ch4:
     ld c, a
     ld b, [hl]
     call get_current_row
-    ld [channel_note4], a
     cp LAST_NOTE
 
     push af ; Save carry for conditonally calling note
     jr nc, .do_setvol4
+
+    ld [channel_note4], a
 
     ;; No toneporta check because it's not supported for CH4 anyway
 
