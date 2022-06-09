@@ -726,7 +726,7 @@ fx_set_pan:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF
 fx_set_duty:
-    ; ret nz
+    ret nz
 
     ;; $900 = 12.5%
     ;; $940 = 25%
@@ -864,7 +864,7 @@ fx_set_volume:
     and %00001111
     or c
     ldh [rAUD1ENV], a
-    ret
+    jp play_ch1_note
 
 .set_chn_2_vol:
     retMute 1
@@ -873,7 +873,7 @@ fx_set_volume:
     and %00001111
     or c
     ldh [rAUD2ENV], a
-    ret
+    jp play_ch2_note
 
 .set_chn_3_vol:
     retMute 2
@@ -903,7 +903,7 @@ fx_set_volume:
 
     ld a, c
     ldh [rAUD4ENV], a
-    ret
+    jp play_ch4_note
 
 
 ;;; Processes effect 4, "vibrato".
