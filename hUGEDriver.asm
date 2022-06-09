@@ -563,10 +563,11 @@ do_table:
     and %01111111
     ;; If there's no note, don't update channel frequencies
     cp NO_NOTE
+    jr z, .no_note2
+
+    sub 36 ; bring the number back in the range of -36, +35
 
     ld b, e
-    jr z, .no_note
-
     ld e, a
     ld d, 4
     call ptr_to_channel_member
@@ -592,6 +593,7 @@ do_table:
 
 .no_note:
     ld e, b
+.no_note2:
     pop bc
     ;; Fall through to do_effect
 
