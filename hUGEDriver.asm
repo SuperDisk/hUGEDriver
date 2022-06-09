@@ -551,6 +551,7 @@ do_table:
     and $F0
     bit 7, d
     jr z, .no_steal
+    res 7, d
     set 0, a
 .no_steal:
     swap a
@@ -560,7 +561,6 @@ do_table:
 
 .no_jump:
     ld a, d
-    and %01111111
     ;; If there's no note, don't update channel frequencies
     cp NO_NOTE
     jr z, .no_note2
