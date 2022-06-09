@@ -2,7 +2,6 @@ include "include/hardware.inc"
 include "include/hUGE.inc"
 
 PURGE PREVIEW_MODE
-; PREVIEW_MODE equ ""
 
 add_a_to_r16: MACRO
     add LOW(\1)
@@ -544,18 +543,24 @@ do_table:
     call get_current_row.row_in_a
     pop hl ; TODO: don't trash HL in the first place
     push bc
-    push af
+
+    ld d, a
 
     ;; If there's a jump, change the current row
     ld a, b
     and $F0
+    bit 7, d
+    jr z, .no_steal
+    set 0, a
+.no_steal:
     swap a
     jr z, .no_jump
     dec a
     ld [hl], a
 
 .no_jump:
-    pop af
+    ld a, d
+    and %01111111
     ;; If there's no note, don't update channel frequencies
     cp NO_NOTE
 
