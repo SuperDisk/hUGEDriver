@@ -595,18 +595,9 @@ do_table:
     ld e, b
 .no_note2:
     pop bc
-    ;; Fall through to do_effect
 
-
-do_effect_table:
-;;; Performs an effect on a given channel, but always
-;;; "does what you want" AKA doesn't skip doing things
-;;; if we're not on tick zero.
-
-;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: B = Effect type (upper 4 bits ignored)
-;;; Param: C = Effect parameters (depend on FX type)
-;;; Destroy: AF BC DE HL
+    ld d, 1
+    jr do_effect.no_set_offset
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -615,6 +606,8 @@ do_effect_table:
 ;;; Destroy: AF BC DE HL
 do_effect:
     ;; Return immediately if effect is 000
+    ld d, 0
+.no_set_offset:
     ld a, b
     and $0F
     or c
@@ -635,6 +628,10 @@ do_effect:
     ld a, [hl+]
     ld h, [hl]
     ld l, a
+    bit 0, d
+    jr z, .no_offset
+    inc hl
+.no_offset:
 
     ld b, e
     ld a, [tick]
