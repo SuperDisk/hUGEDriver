@@ -783,7 +783,7 @@ fx_pattern_break:
 
 ;;; Processes effect E, "note cut".
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Tick to cut the note on (TODO: what does cutting on tick 0 do?)
+;;; Param: C = Tick to cut the note on
 ;;; Param: A = Current tick
 ;;; Destroy: A
 fx_note_cut:
