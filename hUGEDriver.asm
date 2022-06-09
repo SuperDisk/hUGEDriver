@@ -1434,6 +1434,15 @@ process_ch2:
     pop af
     call c, play_ch2_note
 
+    ld a, [table2]
+    ld c, a
+    ld a, [table2+1]
+    ld b, a
+    or c
+    ld hl, table_row2
+    ld e, 1
+    call nz, do_table
+
 process_ch3:
     ld hl, pattern3
     ld de, channel_note3
@@ -1518,6 +1527,15 @@ ENDR
     pop af
     call c, play_ch3_note
 
+    ld a, [table3]
+    ld c, a
+    ld a, [table3+1]
+    ld b, a
+    or c
+    ld hl, table_row3
+    ld e, 2
+    call nz, do_table
+
 process_ch4:
     ld hl, pattern4
     ld a, [hl+]
@@ -1582,6 +1600,15 @@ process_ch4:
 
     pop af
     call c, play_ch4_note
+
+    ld a, [table4]
+    ld c, a
+    ld a, [table4+1]
+    ld b, a
+    or c
+    ld hl, table_row4
+    ld e, 3
+    call nz, do_table
 
     ;; finally just update the tick/order/row values
     jp tick_time
