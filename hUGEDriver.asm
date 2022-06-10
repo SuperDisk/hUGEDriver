@@ -31,8 +31,6 @@ ENDM
 
 ;; Maximum pattern length
 PATTERN_LENGTH EQU 64
-;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 4
 
 SECTION "Playback variables", WRAM0
 ;; Active song descriptor
@@ -90,9 +88,9 @@ channel1:
 channel_period1: dw
 toneporta_target1: dw
 channel_note1: db
+highmask1: db
 vibrato_tremolo_phase1: db
 envelope1: db
-highmask1: db
 table1: dw
 table_row1: db
 ds 5
@@ -104,9 +102,9 @@ channel2:
 channel_period2: dw
 toneporta_target2: dw
 channel_note2: db
+highmask2: db
 vibrato_tremolo_phase2: db
 envelope2: db
-highmask2: db
 table2: dw
 table_row2: db
 ds 5
@@ -118,9 +116,9 @@ channel3:
 channel_period3: dw
 toneporta_target3: dw
 channel_note3: db
+highmask3: db
 vibrato_tremolo_phase3: db
 envelope3: db
-highmask3: db
 table3: dw
 table_row3: db
 ds 5
@@ -132,12 +130,13 @@ channel4:
 channel_period4: dw
 toneporta_target4: dw
 channel_note4: db
+highmask4: db
+step_width4: db
 vibrato_tremolo_phase4: db
 envelope4: db
-highmask4: db
 table4: dw
 table_row4: db
-ds 5
+ds 4
 
 end_zero:
 
@@ -379,9 +378,7 @@ get_note_poly:
 ;;; Destroy: AF
 ptr_to_channel_member:
     ld a, b
-REPT CHANNEL_SIZE_EXPONENT
-    add a
-ENDR
+    swap a
     add d
     ld hl, channels
     add LOW(channels)
@@ -392,15 +389,19 @@ ENDR
     ret
 
 
+;; TODO: Make this take HL instead of DE
+
 ;;; Updates a channel's frequency, and possibly restarts it.
 ;;; Note that CH4 is *never* restarted by this!
 ;;; Param: B = Which channel to update (0 = CH1, 1 = CH2, etc.)
-;;; Param: (ignored for CH4) A = ORed to the value written to NRx4
 ;;; Param: (for CH4) E = Note ID
 ;;; Param: (otherwise) DE = Note period
 ;;; Destroy: AF C
 ;;; Destroy: (for CH4) HL
 update_channel_freq:
+    ld h, 0
+.nonzero_highmask:
+    res 7, h
     ld c, b
     ld a, [mute_channels]
     dec c
@@ -414,42 +415,46 @@ update_channel_freq:
     retMute 0
 
     ld a, e
-    ldh [rAUD1LOW], a
     ld [channel_period1], a
+    ldh [rAUD1LOW], a
     ld a, d
-    ldh [rAUD1HIGH], a
     ld [channel_period1+1], a
+    or h
+    ldh [rAUD1HIGH], a
     ret
 
 .update_channel2:
     retMute 1
 
     ld a, e
-    ldh [rAUD2LOW], a
     ld [channel_period2], a
+    ldh [rAUD2LOW], a
     ld a, d
-    ldh [rAUD2HIGH], a
     ld [channel_period2+1], a
+    or h
+    ldh [rAUD2HIGH], a
     ret
 
 .update_channel3:
     retMute 2
 
     ld a, e
-    ldh [rAUD3LOW], a
     ld [channel_period3], a
+    ldh [rAUD3LOW], a
     ld a, d
-    ldh [rAUD3HIGH], a
     ld [channel_period3+1], a
+    or h
+    ldh [rAUD3HIGH], a
     ret
 
 .update_channel4:
     retMute 3
 
+    ld d, h
     ld a, e
     call get_note_poly
     ldh [rAUD4POLY], a
-    xor a
+    ld a, d
     ldh [rAUD4GO], a
     ret
 
@@ -573,9 +578,12 @@ do_table:
     call ptr_to_channel_member
     ld a, e
     add [hl]
-    ; ld [hl], a
+    inc hl
+    ld d, [hl]
+
     ;; A = note index
     ;; B = channel
+    ;; D = highmask
     ;; pushed = instrument/effect
 
     ;; If ch4, don't get note period (update_channel_freq gets the poly for us)
@@ -585,11 +593,13 @@ do_table:
     jr nz, .is_ch4
 
     call get_note_period
+    ld a, d
     ld d, h
     ld e, l
+    ld h, a
 .is_ch4:
     dec b
-    call update_channel_freq
+    call update_channel_freq.nonzero_highmask
 
 .no_note:
     ld e, b
@@ -1582,6 +1592,7 @@ process_ch4:
     ld a, [hl]
     and %10000000
     swap a
+    ld [step_width4], a
     or d
     ld [channel_period4], a
 
