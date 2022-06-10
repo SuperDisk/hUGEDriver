@@ -9,6 +9,16 @@ add_a_to_r16: MACRO
     ld HIGH(\1), a
 ENDM
 
+;; Thanks PinoBatch!
+sub_from_r16: MACRO ;; (high, low, value)
+    ld a, \2
+    sub \3
+    ld \2, a
+    sbc a  ; A = -1 if borrow or 0 if not
+    add \1
+    ld \1, a
+ENDM
+
 load_de_ind: MACRO
     ld a, [\1]
     ld e, a
@@ -1111,7 +1121,7 @@ fx_toneporta:
     jr z, .done ; both nibbles are the same so no portamento
 .add:
     ld a, c
-    add_a_to_de
+    add_a_to_r16 de
 
     ld a, h
     cp d
