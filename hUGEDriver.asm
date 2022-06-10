@@ -409,7 +409,6 @@ ptr_to_channel_member:
 update_channel_freq:
     ld h, 0
 .nonzero_highmask:
-    res 7, h
     ld c, b
     ld a, [mute_channels]
     dec c
@@ -609,6 +608,7 @@ do_table:
     ld e, l
 .is_ch4:
     ld h, c
+    res 7, h
     dec b
     call update_channel_freq.nonzero_highmask
 
@@ -1052,12 +1052,7 @@ fx_porta_up:
     ld e, a
     adc [hl]
     sub e
-
-    ;; Write back
-.finish:
-    ld d, a ; Store A for call to `update_channel_freq`
-    ld [hl-], a
-    ld [hl], e
+    ld d, a
 
     jp update_channel_freq
 
@@ -1079,9 +1074,9 @@ fx_porta_down:
     ld e, a
     sbc a
     add [hl]
+    ld d, a
 
-    ;; Write back
-    jr fx_porta_up.finish
+    jp update_channel_freq
 
 
 ;;; Processes effect 2, "tone portamento".
@@ -1158,12 +1153,15 @@ fx_toneporta:
     ld [hl+], a
     ld [hl], d
 
-    ld a, 6
+
+    ld a, 4
     add_a_to_r16 hl
+
     ld a, [hl]
     res 7, [hl]
+    ld h, a
     ;; B must be preserved for this
-    jp update_channel_freq
+    jp update_channel_freq.nonzero_highmask
 
 .setup:
     ;; We're on tick zero, so load the note period into the toneporta target.
