@@ -23,6 +23,7 @@ include "order.htt"
 ;;;;;;;;;;;;
 
 include "pattern.htt"
+include "subpattern.htt"
 
 ;;;;;;;;;;;;;;;;
 ;; Instruments

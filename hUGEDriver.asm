@@ -2,55 +2,11 @@ include "include/hardware.inc"
 include "include/hUGE.inc"
 
 add_a_to_r16: MACRO
-    add \2
-    ld \2, a
-    adc \1
-    sub \2
-    ld \1, a
-ENDM
-
-add_a_to_hl: MACRO
-    add_a_to_r16 h, l
-ENDM
-
-add_a_to_de: MACRO
-    add_a_to_r16 d, e
-ENDM
-
-;; Thanks PinoBatch!
-sub_from_r16: MACRO ;; (high, low, value)
-    ld a, \2
-    sub \3
-    ld \2, a
-    sbc a  ; A = -1 if borrow or 0 if not
-    add \1
-    ld \1, a
-ENDM
-
-ret_dont_call_playnote: MACRO
-    pop hl
-    pop af
-    and a ; Clear carry to avoid calling `play_chX_note`
-    push af
-    jp hl
-ENDM
-
-add_a_ind_ret_hl: MACRO
-    ld hl, \1
-    add [hl]
-    inc hl
-    ld h, [hl]
-    ld l, a
-    adc h
-    sub l
-    ld h, a
-ENDM
-
-load_hl_ind: MACRO
-    ld hl, \1
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
+    add LOW(\1)
+    ld LOW(\1), a
+    adc HIGH(\1)
+    sub LOW(\1)
+    ld HIGH(\1), a
 ENDM
 
 load_de_ind: MACRO
@@ -73,8 +29,6 @@ ENDM
 
 ;; Maximum pattern length
 PATTERN_LENGTH EQU 64
-;; Amount to be shifted in order to skip a channel.
-CHANNEL_SIZE_EXPONENT EQU 3
 
 SECTION "Playback variables", WRAM0
 ;; Active song descriptor
@@ -117,14 +71,13 @@ start_zero:
 
 _hUGE_mute_mask::
 mute_channels: db
-current_order: db
-next_order: db
-row_break: db
 
-temp_note_value: dw
-row: db
-tick: db
 counter: db
+tick: db
+row_break: db
+next_order: db
+row: db
+current_order: db
 
 channels:
 ;;;;;;;;;;;
@@ -134,9 +87,12 @@ channel1:
 channel_period1: dw
 toneporta_target1: dw
 channel_note1: db
+highmask1: db
 vibrato_tremolo_phase1: db
 envelope1: db
-highmask1: db
+table1: dw
+table_row1: db
+ds 5
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -145,9 +101,12 @@ channel2:
 channel_period2: dw
 toneporta_target2: dw
 channel_note2: db
+highmask2: db
 vibrato_tremolo_phase2: db
 envelope2: db
-highmask2: db
+table2: dw
+table_row2: db
+ds 5
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -156,9 +115,12 @@ channel3:
 channel_period3: dw
 toneporta_target3: dw
 channel_note3: db
+highmask3: db
 vibrato_tremolo_phase3: db
 envelope3: db
-highmask3: db
+table3: dw
+table_row3: db
+ds 5
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -167,9 +129,13 @@ channel4:
 channel_period4: dw
 toneporta_target4: dw
 channel_note4: db
+highmask4: db
+step_width4: db
 vibrato_tremolo_phase4: db
 envelope4: db
-highmask4: db
+table4: dw
+table_row4: db
+ds 4
 
 end_zero:
 
@@ -304,6 +270,7 @@ hUGE_mute_channel::
 ;;; Destroy: HL
 get_current_row:
     ld a, [row]
+.row_in_a:
     ld h, a
     ;; Multiply by 3 for the note value
     add h
@@ -350,7 +317,7 @@ get_current_note:
 ;;; Return: CF = 1
 ;;; Destroy: AF
 get_note_period:
-    add a ;; double it to get index into hi/lo table
+    add a ; double it to get index into hi/lo table
     add LOW(note_table)
     ld l, a
     adc HIGH(note_table)
@@ -387,9 +354,9 @@ get_note_poly:
     ld h, a
 
     ; B := (A-4) div 4;
-    sub 4
     srl a
     srl a
+    dec a
     ld l, a
 
     ; C := (A mod 4)+4;
@@ -410,9 +377,7 @@ get_note_poly:
 ;;; Destroy: AF
 ptr_to_channel_member:
     ld a, b
-REPT CHANNEL_SIZE_EXPONENT
-    add a
-ENDR
+    swap a
     add d
     add LOW(channels)
     ld l, a
@@ -422,31 +387,37 @@ ENDR
     ret
 
 
+;; TODO: Make this take HL instead of DE
+
 ;;; Updates a channel's frequency, and possibly restarts it.
 ;;; Note that CH4 is *never* restarted by this!
 ;;; Param: B = Which channel to update (0 = CH1, 1 = CH2, etc.)
-;;; Param: (ignored for CH4) A = ORed to the value written to NRx4
 ;;; Param: (for CH4) E = Note ID
 ;;; Param: (otherwise) DE = Note period
-;;; Destroy: AF B
+;;; Destroy: AF C
 ;;; Destroy: (for CH4) HL
 update_channel_freq:
-    ld c, a
+    ld h, 0
+.nonzero_highmask:
+    res 7, h
+    ld c, b
     ld a, [mute_channels]
-    dec b
+    dec c
     jr z, .update_channel2
-    dec b
+    dec c
     jr z, .update_channel3
-    dec b
+    dec c
     jr z, .update_channel4
 
 .update_channel1:
     retMute 0
 
     ld a, e
+    ld [channel_period1], a
     ldh [rAUD1LOW], a
     ld a, d
-    or c
+    ld [channel_period1+1], a
+    or h
     ldh [rAUD1HIGH], a
     ret
 
@@ -454,9 +425,11 @@ update_channel_freq:
     retMute 1
 
     ld a, e
+    ld [channel_period2], a
     ldh [rAUD2LOW], a
     ld a, d
-    or c
+    ld [channel_period2+1], a
+    or h
     ldh [rAUD2HIGH], a
     ret
 
@@ -464,19 +437,25 @@ update_channel_freq:
     retMute 2
 
     ld a, e
+    ld [channel_period3], a
     ldh [rAUD3LOW], a
     ld a, d
-    or c
+    ld [channel_period3+1], a
+    or h
     ldh [rAUD3HIGH], a
     ret
 
 .update_channel4:
     retMute 3
 
+    ld d, h
     ld a, e
     call get_note_poly
+    ld hl, step_width4
+    or [hl]
     ldh [rAUD4POLY], a
-    xor a
+
+    ld a, d
     ldh [rAUD4GO], a
     ret
 
@@ -492,18 +471,14 @@ play_ch1_note:
     retMute 0
 
     ;; Play a note on channel 1 (square wave)
-    ld a, [temp_note_value]
-    ld [channel_period1], a
+    ld hl, channel_period1
+    ld a, [hl+]
     ldh [rAUD1LOW], a
 
-    ld a, [temp_note_value+1]
-    ld [channel_period1+1], a
-
     ;; Get the highmask and apply it.
-    ld hl, highmask1
+    ld a, [highmask1]
     or [hl]
     ldh [rAUD1HIGH], a
-
     ret
 
 play_ch2_note:
@@ -511,18 +486,14 @@ play_ch2_note:
     retMute 1
 
     ;; Play a note on channel 2 (square wave)
-    ld a, [temp_note_value]
-    ld [channel_period2], a
+    ld hl, channel_period2
+    ld a, [hl+]
     ldh [rAUD2LOW], a
 
-    ld a, [temp_note_value+1]
-    ld [channel_period2+1], a
-
     ;; Get the highmask and apply it.
-    ld hl, highmask2
+    ld a, [highmask2]
     or [hl]
     ldh [rAUD2HIGH], a
-
     ret
 
 play_ch3_note:
@@ -539,18 +510,14 @@ play_ch3_note:
     ldh [rAUD3ENA], a
 
     ;; Play a note on channel 3 (waveform)
-    ld a, [temp_note_value]
-    ld [channel_period3], a
+    ld hl, channel_period3
+    ld a, [hl+]
     ldh [rAUD3LOW], a
 
-    ld a, [temp_note_value+1]
-    ld [channel_period3+1], a
-
     ;; Get the highmask and apply it.
-    ld hl, highmask3
+    ld a, [highmask3]
     or [hl]
     ldh [rAUD3HIGH], a
-
     ret
 
 play_ch4_note:
@@ -558,8 +525,7 @@ play_ch4_note:
     retMute 3
 
     ;; Play a "note" on channel 4 (noise)
-    ld a, [temp_note_value]
-    ld [channel_period4+1], a
+    ld a, [channel_period4]
     ldh [rAUD4POLY], a
 
     ;; Get the highmask and apply it.
@@ -568,6 +534,81 @@ play_ch4_note:
 
     ret
 
+;;; Executes a row of a table.
+;;; Param: BC = Pointer to which table to run
+;;; Param: [HL] = Which row the table is on
+;;; Param: E = Which channel to run the table on
+do_table:
+    ;; Increment the current row
+    ld a, [hl]
+    inc [hl]
+    push hl
+
+    ;; Grab the cell values, return if no note.
+    ;; Save BC for doing effects.
+    call get_current_row.row_in_a
+    pop hl ; TODO: don't trash HL in the first place
+    push bc
+
+    ld d, a
+
+    ;; If there's a jump, change the current row
+    ld a, b
+    and $F0
+    bit 7, d
+    jr z, .no_steal
+    res 7, d
+    set 0, a
+.no_steal:
+    swap a
+    jr z, .no_jump
+    dec a
+    ld [hl], a
+
+.no_jump:
+    ld a, d
+    ;; If there's no note, don't update channel frequencies
+    cp NO_NOTE
+    jr z, .no_note2
+
+    sub 36 ; bring the number back in the range of -36, +35
+
+    ld b, e
+    ld e, a
+    ld d, 4
+    call ptr_to_channel_member
+    ld a, e
+    add [hl]
+    inc hl
+    ld d, [hl]
+
+    ;; A = note index
+    ;; B = channel
+    ;; D = highmask
+    ;; pushed = instrument/effect
+
+    ;; If ch4, don't get note period (update_channel_freq gets the poly for us)
+    ld e, a
+    inc b
+    bit 2, b
+    ld c, d
+    jr nz, .is_ch4
+
+    call get_note_period
+    ld d, h
+    ld e, l
+.is_ch4:
+    ld h, c
+    dec b
+    call update_channel_freq.nonzero_highmask
+
+.no_note:
+    ld e, b
+.no_note2:
+    pop bc
+
+    ld d, 1
+    jr do_effect.no_set_offset
 
 ;;; Performs an effect on a given channel.
 ;;; Param: E = Channel ID (0 = CH1, 1 = CH2, etc.)
@@ -575,9 +616,17 @@ play_ch4_note:
 ;;; Param: C = Effect parameters (depend on FX type)
 ;;; Destroy: AF BC DE HL
 do_effect:
+    ;; Return immediately if effect is 000
+    ld d, 0
+.no_set_offset:
+    ld a, b
+    and $0F
+    or c
+    ret z
+
     ;; Strip the instrument bits off leaving only effect code
     ld a, b
-    and %00001111
+    and $0F
     ;; Multiply by 2 to get offset into table
     add a
 
@@ -590,6 +639,10 @@ do_effect:
     ld a, [hl+]
     ld h, [hl]
     ld l, a
+    bit 0, d
+    jr z, .no_offset
+    inc hl
+.no_offset:
 
     ld b, e
     ld a, [tick]
@@ -710,6 +763,423 @@ fx_set_duty:
     ret
 
 
+;;; Processes (global) effect F, "set speed".
+;;; Param: C = New amount of ticks per row
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A
+fx_set_speed:
+    ret nz
+
+    ld a, c
+    ld [ticks_per_row], a
+    ret
+
+
+hUGE_set_position::
+;;; Processes (global) effect B, "position jump".
+;;; Param: C = ID of the order to jump to
+;;; Destroy: A
+fx_pos_jump:
+    ld a, 1
+    ld [row_break], a
+    ld a, c
+    ld [next_order], a
+    ret
+
+
+;;; Processes (global) effect D, "pattern break".
+;;; Param: C = ID of the next order's row to start on
+;;; Destroy: A
+fx_pattern_break:
+    ld a, c
+    ld [row_break], a
+    ret
+
+
+;;; Processes effect E, "note cut".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Tick to cut the note on
+;;; Param: A = Current tick
+;;; Destroy: A
+fx_note_cut:
+    cp c
+    ret nz
+
+    ;; check channel mute
+
+    ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
+    ;; Overall, these two instructions add 1 to the number.
+    ;; However, the first instruction will generate a carry for inputs of $02 and $03;
+    ;; the `adc` will pick the carry up, and "separate" 0 / 1 from 2 / 3 by an extra 1.
+    ;; Luckily, this yields correct results for 0 ($01), 1 ($02), and 2 ($03 + 1 = $04).
+    ;; We'll see about fixing 3 afterwards.
+    add -2
+    adc 3
+    ;; After being shifted left, the inputs are $02, $04, $08 and $0A; all are valid BCD,
+    ;; except for $0A. Since we just performed `add a`, DAA will correct the latter to $10.
+    ;; (This should be correctly emulated everywhere, since the inputs are identical to
+    ;; "regular" BCD.)
+    ;; When shifting the results back, we'll thus get $01, $02, $04 and $08!
+    add a
+    daa
+    rra
+    ld d, a
+    ld a, [mute_channels]
+    and d
+    ret nz
+
+    ;; fallthrough
+
+
+;;; Cuts note on a channel.
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Destroy: AF HL
+note_cut:
+    ld a, b
+    add a
+    add a
+    add b ; multiply by 5
+    add LOW(rAUD1ENV)
+    ld l, a
+    ld h, HIGH(rAUD1ENV)
+    xor a
+    ld [hl+], a
+    ld a, b
+    cp 2
+    ret z ; return early if CH3-- no need to retrigger note
+
+    ;; Retrigger note
+    inc l ; Not `inc hl` because H stays constant (= $FF)
+    ld [hl], $FF
+    ret
+
+
+;;; Processes effect C, "set volume".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Volume to set the channel to
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF BC
+fx_set_volume:
+    ret nz ; Return if we're not on tick zero.
+
+    swap c
+    ld a, [mute_channels]
+    dec b
+    jr z, .set_chn_2_vol
+    dec b
+    jr z, .set_chn_3_vol
+    dec b
+    jr z, .set_chn_4_vol
+
+.set_chn_1_vol:
+    retMute 0
+
+    ldh a, [rAUD1ENV]
+    and %00001111
+    or c
+    ldh [rAUD1ENV], a
+    jp play_ch1_note
+
+.set_chn_2_vol:
+    retMute 1
+
+    ldh a, [rAUD2ENV]
+    and %00001111
+    or c
+    ldh [rAUD2ENV], a
+    jp play_ch2_note
+
+.set_chn_3_vol:
+    retMute 2
+
+    ;; "Quantize" the more finely grained volume control down to one of 4 values.
+    ld a, c
+    cp 10 << 4
+    jr nc, .one
+    cp 5 << 4
+    jr nc, .two
+    or a
+    jr z, .done ; Zero maps to zero
+.three:
+    ld a, %01100000
+    jr .done
+.two:
+    ld a, %01000000
+    jr .done
+.one:
+    ld a, %00100000
+.done:
+    ldh [rAUD3LEVEL], a
+    ret
+
+.set_chn_4_vol:
+    retMute 3
+
+    ld a, c
+    ldh [rAUD4ENV], a
+    jp play_ch4_note
+
+
+;;; Processes effect 4, "vibrato".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = FX param
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF B DE HL
+fx_vibrato:
+    ret z
+
+    ;; Extremely poor man's vibrato.
+    ;; Speed values:
+    ;; (0x0  = 1.0)
+    ;; (0x1  = 0.5)
+    ;; (0x3  = 0.25)
+    ;; (0x7  = 0.125)
+    ;; (0xf  = 0.0625)
+    ld d, 4
+    call ptr_to_channel_member
+
+    ld a, c
+    and %11110000
+    swap a
+    ld e, a
+
+    ld a, [counter]
+    and e
+    ld a, [hl]
+    jr z, .go_up
+.restore:
+    call get_note_period
+    ld d, h
+    ld e, l
+    jr .finish_vibrato
+.go_up:
+    call get_note_period
+    ld a, c
+    and %00001111
+    add l
+    ld e, a
+    adc h
+    sub e
+    ld d, a
+.finish_vibrato:
+    jp update_channel_freq
+
+
+;;; Processes effect 0, "arpeggio".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Offsets in semitones (each nibble)
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF B DE HL
+fx_arpeggio:
+    ret z
+
+    ld d, 4
+    call ptr_to_channel_member
+    ld d, [hl]
+
+    ld a, [tick]
+    dec a
+
+    ;; TODO: A crappy modulo, because it's not a multiple of four :(
+
+    jr .test_greater_than_two
+.greater_than_two:
+    sub 3
+.test_greater_than_two:
+    cp 3
+    jr nc, .greater_than_two
+
+    ;; Multiply by 2 to get offset into table
+    add a
+
+    add LOW(.arp_options)
+    ld l, a
+    adc HIGH(.arp_options)
+    sub l
+    ld h, a
+    jp hl
+
+.arp_options:
+    jr .set_arp1
+    jr .set_arp2
+    ;; No `jr .reset_arp`
+
+.reset_arp:
+    ld a, d
+    jr .finish_skip_add
+
+.set_arp2:
+    ld a, c
+    swap a
+    db $FE ; cp <imm8> gobbles next byte
+
+.set_arp1:
+    ld a, c
+.finish_arp:
+    and %00001111
+    add d
+.finish_skip_add:
+    call get_note_period
+    ld d, h
+    ld e, l
+    jp update_channel_freq
+
+
+;;; Processes effect 1, "portamento up".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = How many units to slide the pitch by per tick
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A B DE HL
+fx_porta_up:
+    ret z
+
+    ld d, 0
+    call ptr_to_channel_member
+
+    ;; Add C to 16-bit value at HL
+    ld a, [hl+]
+    add c
+    ld e, a
+    adc [hl]
+    sub e
+
+    ;; Write back
+.finish:
+    ld d, a ; Store A for call to `update_channel_freq`
+    ld [hl-], a
+    ld [hl], e
+
+    jp update_channel_freq
+
+
+;;; Processes (global) effect 2, "portamento down".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = How many units to slide the pitch down by per tick
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A B DE HL
+fx_porta_down:
+    ret z
+
+    ld d, 0
+    call ptr_to_channel_member
+
+    ;; Subtract C from 16-bit value at [HL]
+    ld a, [hl+]
+    sub c
+    ld e, a
+    sbc a
+    add [hl]
+
+    ;; Write back
+    jr fx_porta_up.finish
+
+
+;;; Processes effect 2, "tone portamento".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Target note
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: A B DE HL
+fx_toneporta:
+    jr z, .setup
+
+    ld d, 0
+    call ptr_to_channel_member
+    push hl
+
+    ld a, [hl+]
+    ld e, a
+    ld a, [hl+]
+    ld d, a
+
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ;; Comparing which direction to move the current value
+    ;; TODO: Optimize this!!!!
+
+    ;; Compare high byte
+    ld a, h
+
+    cp d
+    jr c, .subtract ; target is less than the current period
+    jr nz, .add
+.high_byte_same:
+    ld a, l
+    cp e
+    jr c, .subtract ; the target is less than the current period
+    jr z, .done ; both nibbles are the same so no portamento
+.add:
+    ld a, c
+    add_a_to_de
+
+    ld a, h
+    cp d
+    jr c, .set_exact
+    jr nz, .done
+    ld a, l
+    cp e
+    jr c, .set_exact
+
+    jr .done
+
+.subtract:
+    sub_from_r16 d, e, c
+
+    bit 7, d ; check for overflow
+    jr nz, .set_exact
+
+    ld a, d
+    cp h
+    jr c, .set_exact
+    jr nz, .done
+    ld a, e
+    cp l
+    jr c, .set_exact
+
+    jr .done
+.set_exact:
+    ld d, h
+    ld e, l
+.done:
+
+    pop hl
+    ld a, e
+    ld [hl+], a
+    ld [hl], d
+
+    ld a, 6
+    add_a_to_r16 hl
+    ld a, [hl]
+    res 7, [hl]
+    ;; B must be preserved for this
+    jp update_channel_freq
+
+.setup:
+    ;; We're on tick zero, so load the note period into the toneporta target.
+    ld d, 4
+    call ptr_to_channel_member
+
+    ld a, [hl-]
+    ld d, h
+    ld e, l
+    call get_note_period
+    ld a, h
+    ld [de], a
+    dec de
+    ld a, l
+    ld [de], a
+
+ret_dont_play_note:
+    ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
+    ;; the C flag, which relies on the way the caller is implemented!!
+    pop hl
+    pop af
+    and a ; Clear carry to avoid calling `play_chX_note`
+    push af
+    jp hl
+
+
 ;;; Processes effect A, "volume slide".
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
 ;;; Param: C = FX param; either nibble should be 0, otherwise weird (unspecified) behavior may arise
@@ -796,22 +1266,8 @@ fx_vol_slide:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF D HL
 fx_note_delay:
-    jr nz, .play_note
+    jr z, ret_dont_play_note
 
-    ;; Just store the note into the channel period, and don't play a note.
-    ld d, 0
-    call ptr_to_channel_member
-
-    ld a, [temp_note_value]
-    ld [hl+], a
-    ld a, [temp_note_value+1]
-    ld [hl], a
-
-    ;; Don't call _playnote. This is done by grabbing the return
-    ;; address and manually skipping the next call instruction.
-    ret_dont_call_playnote
-
-.play_note:
     cp c
     ret nz ; wait until the correct tick to play the note
 
@@ -825,12 +1281,6 @@ play_note:
     ld d, 0
     call ptr_to_channel_member
 
-    ;; TODO: Change this to accept HL instead?
-    ld a, [hl+]
-    ld [temp_note_value], a
-    ld a, [hl]
-    ld [temp_note_value+1], a
-
     ld a, b
     add a
     add LOW(play_note_routines)
@@ -840,438 +1290,6 @@ play_note:
     ld h, a
     jp hl
 
-
-;;; Processes (global) effect F, "set speed".
-;;; Param: C = New amount of ticks per row
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: A
-fx_set_speed:
-    ret nz
-
-    ld a, c
-    ld [ticks_per_row], a
-    ret
-
-
-hUGE_set_position::
-;;; Processes (global) effect B, "position jump".
-;;; Param: C = ID of the order to jump to
-;;; Destroy: A
-fx_pos_jump:
-    ld a, 1
-    ld [row_break], a
-    ld a, c
-    ld [next_order], a
-    ret
-
-
-;;; Processes (global) effect D, "pattern break".
-;;; Param: C = ID of the next order's row to start on
-;;; Destroy: A
-fx_pattern_break:
-    ld a, c
-    ld [row_break], a
-    ret
-
-
-;;; Processes effect E, "note cut".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Tick to cut the note on (TODO: what does cutting on tick 0 do?)
-;;; Param: A = Current tick
-;;; Destroy: A
-fx_note_cut:
-    cp c
-    ret nz
-
-    ;; check channel mute
-
-    ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
-    ;; Overall, these two instructions add 1 to the number.
-    ;; However, the first instruction will generate a carry for inputs of $02 and $03;
-    ;; the `adc` will pick the carry up, and "separate" 0 / 1 from 2 / 3 by an extra 1.
-    ;; Luckily, this yields correct results for 0 ($01), 1 ($02), and 2 ($03 + 1 = $04).
-    ;; We'll see about fixing 3 afterwards.
-    add -2
-    adc 3
-    ;; After being shifted left, the inputs are $02, $04, $08 and $0A; all are valid BCD,
-    ;; except for $0A. Since we just performed `add a`, DAA will correct the latter to $10.
-    ;; (This should be correctly emulated everywhere, since the inputs are identical to
-    ;; "regular" BCD.)
-    ;; When shifting the results back, we'll thus get $01, $02, $04 and $08!
-    add a
-    daa
-    rra
-    ld d, a
-    ld a, [mute_channels]
-    and d
-    ret nz
-
-    ;; fallthrough
-
-
-;;; Cuts note on a channel.
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Destroy: AF HL
-note_cut:
-    ld a, b
-    add a
-    add a
-    add b ; multiply by 5
-    add LOW(rAUD1ENV)
-    ld l, a
-    ld h, HIGH(rAUD1ENV)
-    xor a
-    ld [hl+], a
-    ld a, b
-    cp 2
-    ret z ; return early if CH3-- no need to retrigger note
-
-    ;; Retrigger note
-    inc l ; Not `inc hl` because H stays constant (= $FF)
-    ld [hl], $FF
-    ret
-
-
-;;; Processes effect C, "set volume".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Volume to set the channel to
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF BC
-fx_set_volume:
-    ret nz ; Return if we're not on tick zero.
-
-    swap c
-    ld a, [mute_channels]
-    dec b
-    jr z, .set_chn_2_vol
-    dec b
-    jr z, .set_chn_3_vol
-    dec b
-    jr z, .set_chn_4_vol
-
-.set_chn_1_vol:
-    retMute 0
-
-    ldh a, [rAUD1ENV]
-    and %00001111
-    or c
-    ldh [rAUD1ENV], a
-    ret
-
-.set_chn_2_vol:
-    retMute 1
-
-    ldh a, [rAUD2ENV]
-    and %00001111
-    or c
-    ldh [rAUD2ENV], a
-    ret
-
-.set_chn_3_vol:
-    retMute 2
-
-    ;; "Quantize" the more finely grained volume control down to one of 4 values.
-    ld a, c
-    cp 10 << 4
-    jr nc, .one
-    cp 5 << 4
-    jr nc, .two
-    or a
-    jr z, .done ; Zero maps to zero
-.three:
-    ld a, %01100000
-    jr .done
-.two:
-    ld a, %01000000
-    jr .done
-.one:
-    ld a, %00100000
-.done:
-    ldh [rAUD3LEVEL], a
-    ret
-
-.set_chn_4_vol:
-    retMute 3
-
-    ld a, c
-    ldh [rAUD4ENV], a
-    ret
-
-
-;;; Processes effect 4, "vibrato".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = FX param
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF B DE HL
-fx_vibrato:
-    ret z
-
-    ;; Extremely poor man's vibrato.
-    ;; Speed values:
-    ;; (0x0  = 1.0)
-    ;; (0x1  = 0.5)
-    ;; (0x3  = 0.25)
-    ;; (0x7  = 0.125)
-    ;; (0xf  = 0.0625)
-    ld d, 4
-    call ptr_to_channel_member
-
-    ld a, c
-    and %11110000
-    swap a
-    ld e, a
-
-    ld a, [counter]
-    and e
-    ld a, [hl]
-    jr z, .go_up
-.restore:
-    call get_note_period
-    jr .finish_vibrato
-.go_up:
-    call get_note_period
-    ld a, c
-    and %00001111
-    add_a_to_hl
-.finish_vibrato:
-    ld d, h
-    ld e, l
-    xor a
-    jp update_channel_freq
-
-
-;;; Processes effect 8, "arpeggio".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Offsets in semitones (each nibble)
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF B DE HL
-fx_arpeggio:
-    ret z
-
-    ld d, 4
-    call ptr_to_channel_member
-    ld d, [hl]
-
-    ld a, [tick]
-    dec a
-
-    ;; TODO: A crappy modulo, because it's not a multiple of four :(
-
-    jr .test_greater_than_two
-.greater_than_two:
-    sub 3
-.test_greater_than_two:
-    cp 3
-    jr nc, .greater_than_two
-
-    ;; Multiply by 2 to get offset into table
-    add a
-
-    add LOW(.arp_options)
-    ld l, a
-    adc HIGH(.arp_options)
-    sub l
-    ld h, a
-    jp hl
-
-.arp_options:
-    jr .set_arp1
-    jr .set_arp2
-    ;; No `jr .reset_arp`
-
-.reset_arp:
-    ld a, d
-    jr .finish_skip_add
-
-.set_arp2:
-    ld a, c
-    swap a
-    db $FE ; cp <imm8> gobbles next byte
-
-.set_arp1:
-    ld a, c
-.finish_arp:
-    and %00001111
-    add d
-.finish_skip_add:
-    call get_note_period
-    ld d, h
-    ld e, l
-    xor a
-    jp update_channel_freq
-
-
-;;; Processes effect 1, "portamento up".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = How many units to slide the pitch by per tick
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: A B DE HL
-fx_porta_up:
-    ret z
-
-    ld d, 0
-    call ptr_to_channel_member
-
-    ;; Add C to 16-bit value at HL
-    ld a, [hl+]
-    add c
-    ld e, a
-    adc [hl]
-    sub e
-
-    ;; Write back
-.finish:
-    ld d, a ; Store A for call to `update_channel_freq`
-    ld [hl-], a
-    ld [hl], e
-
-    xor a
-    jp update_channel_freq
-
-
-;;; Processes (global) effect 2, "portamento down".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = How many units to slide the pitch down by per tick
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: A B DE HL
-fx_porta_down:
-    ret z
-
-    ld d, 0
-    call ptr_to_channel_member
-
-    ;; Subtract C from 16-bit value at [HL]
-    ld a, [hl+]
-    sub c
-    ld e, a
-    sbc a
-    add [hl]
-
-    ;; Write back
-    jr fx_porta_up.finish
-
-
-;;; Processes effect 2, "tone portamento".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Target note
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: A B DE HL
-fx_toneporta:
-    jr nz, .do_toneporta
-
-    ;; We're on tick zero, so just move the temp note value into the toneporta target.
-    ld d, 2
-    call ptr_to_channel_member
-
-    ;; If the note is nonexistent, then just return
-    ld a, [temp_note_value]
-    or a
-    jr z, .return_skip
-
-    ld [hl+], a
-    ld a, [temp_note_value+1]
-    ld [hl], a
-
-    ;; Don't call _playnote. This is done by grabbing the return
-    ;; address and manually skipping the next call instruction.
-.return_skip:
-    ret_dont_call_playnote
-
-.do_toneporta:
-    ld d, 0
-    call ptr_to_channel_member
-    push hl
-
-    ld a, [hl+]
-    ld e, a
-    ld a, [hl+]
-    ld d, a
-
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-
-    ;; Comparing which direction to move the current value
-    ;; TODO: Optimize this!!!!
-
-    ;; Compare high byte
-    ld a, h
-
-    cp d
-    jr c, .subtract ; target is less than the current period
-    jr nz, .add
-.high_byte_same:
-    ld a, l
-    cp e
-    jr c, .subtract ; the target is less than the current period
-    jr z, .done ; both nibbles are the same so no portamento
-.add:
-    ld a, c
-    add_a_to_de
-
-    ld a, h
-    cp d
-    jr c, .set_exact
-    jr nz, .done
-    ld a, l
-    cp e
-    jr c, .set_exact
-
-    jr .done
-
-.subtract:
-    sub_from_r16 d, e, c
-
-    bit 7, d ; check for overflow
-    jr nz, .set_exact
-
-    ld a, d
-    cp h
-    jr c, .set_exact
-    jr nz, .done
-    ld a, e
-    cp l
-    jr c, .set_exact
-
-    jr .done
-.set_exact:
-    ld d, h
-    ld e, l
-.done:
-
-    pop hl
-    ld a, e
-    ld [hl+], a
-    ld [hl], d
-
-    ld a, 6
-    add_a_to_hl
-    ld a, [hl]
-    res 7, [hl]
-    ;; B must be preserved for this
-    jp update_channel_freq
-
-
-;; TODO: Find some way to de-duplicate this code!
-;;; Computes the pointer to a CH4 instrument.
-;;; Param: B = The instrument's ID
-;;; Param: DE = Instrument pointer table
-;;; Return: DE = Pointer to the instrument
-;;; Return: ZF = Set if and only if there was no instrument (ID == 0)
-;;; Destroy: AF
-setup_instrument_pointer_ch4:
-    ;; Call with:
-    ;; Instrument/High nibble of effect in B
-    ;; Stores whether the instrument was real in the Z flag
-    ;; Stores the instrument pointer in DE
-    ld a, b
-    and %11110000
-    swap a
-    ret z ; If there's no instrument, then return early.
-
-    dec a ; Instrument 0 is "no instrument"
-    add a
-    jr setup_instrument_pointer.finish
 
 ;;; Computes the pointer to an instrument.
 ;;; Param: B = The instrument's ID
@@ -1291,15 +1309,15 @@ setup_instrument_pointer:
 
     dec a ; Instrument 0 is "no instrument"
 .finish:
-    ;; Shift left twice to multiply by 4
+    ;; Shift left thrice to multiply by 8
+    add a
     add a
     add a
 
-    add_a_to_de
+    add_a_to_r16 hl
 
     rla ; reset the Z flag
     ret
-
 
 _hUGE_dosound_banked::
 _hUGE_dosound::
@@ -1314,10 +1332,24 @@ hUGE_dosound::
     ld hl, pattern1
     ld de, channel_note1
     call get_current_note
-    push af
+
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol1
 
-    load_de_ind duty_instruments
+    ld a, b
+    and $0F
+    cp 3 ; If toneporta, don't load the channel period
+    jr z, .toneporta
+    ld a, l
+    ld [channel_period1], a
+    ld a, h
+    ld [channel_period1+1], a
+.toneporta:
+
+    ld hl, duty_instruments
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
     ld a, [highmask1]
     res 7, a ; Turn off the "initial" flag
@@ -1325,41 +1357,63 @@ hUGE_dosound::
 
     checkMute 0, .do_setvol1
 
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD1SWEEP], a
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD1LEN], a
-    ld a, [de]
+    ld a, [hl+]
     ldh [rAUD1ENV], a
-    inc de
-    ld a, [de]
+    ld a, [hl+]
+    ld [table1], a
+    ld a, [hl+]
+    ld [table1+1], a
+    xor a
+    ld [table_row1], a
+
+    ld a, [hl]
 
 .write_mask1:
     ld [highmask1], a
 
 .do_setvol1:
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     ld e, 0
     call do_effect
 
     pop af
     call c, play_ch1_note
 
+    ld a, [table1]
+    ld c, a
+    ld a, [table1+1]
+    ld b, a
+    or c
+    ld hl, table_row1
+    ld e, 0
+    call nz, do_table
+
 process_ch2:
     ;; Note playback
     ld hl, pattern2
     ld de, channel_note2
     call get_current_note
-    push af
+
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol2
 
-    load_de_ind duty_instruments
+    ld a, b
+    and $0F
+    cp 3 ; If toneporta, don't load the channel period
+    jr z, .toneporta
+    ld a, l
+    ld [channel_period2], a
+    ld a, h
+    ld [channel_period2+1], a
+.toneporta:
+
+    ld hl, duty_instruments
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
     ld a, [highmask2]
     res 7, a ; Turn off the "initial" flag
@@ -1367,45 +1421,62 @@ process_ch2:
 
     checkMute 1, .do_setvol2
 
-    inc de
-    ld a, [de]
-    inc de
+    inc hl
+
+    ld a, [hl+]
     ldh [rAUD2LEN], a
-    ld a, [de]
+    ld a, [hl+]
     ldh [rAUD2ENV], a
-    inc de
-    ld a, [de]
+    ld a, [hl+]
+    ld [table2], a
+    ld a, [hl+]
+    ld [table2+1], a
+    xor a
+    ld [table_row2], a
+
+    ld a, [hl]
 
 .write_mask2:
     ld [highmask2], a
 
 .do_setvol2:
-    ld a, l
-    ld [temp_note_value], a
-    ld a, h
-    ld [temp_note_value+1], a
-
     ld e, 1
     call do_effect
 
     pop af
     call c, play_ch2_note
 
+    ld a, [table2]
+    ld c, a
+    ld a, [table2+1]
+    ld b, a
+    or c
+    ld hl, table_row2
+    ld e, 1
+    call nz, do_table
+
 process_ch3:
     ld hl, pattern3
     ld de, channel_note3
     call get_current_note
 
+    push af ; Save carry for conditonally calling note
+    jp nc, .do_setvol3
+
+    ld a, b
+    and $0F
+    cp 3 ; If toneporta, don't load the channel period
+    jr z, .toneporta
     ld a, l
-    ld [temp_note_value], a
+    ld [channel_period3], a
     ld a, h
-    ld [temp_note_value+1], a
+    ld [channel_period3+1], a
+.toneporta:
 
-    push af
-
-    jr nc, .do_setvol3
-
-    load_de_ind wave_instruments
+    ld hl, wave_instruments
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
     ld a, [highmask3]
     res 7, a ; Turn off the "initial" flag
@@ -1413,22 +1484,28 @@ process_ch3:
 
     checkMute 2, .do_setvol3
 
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD3LEN], a
-    ld a, [de]
-    inc de
+    ld a, [hl+]
     ldh [rAUD3LEVEL], a
-    ld a, [de]
-    inc de
+    ld a, [hl+]
+    push hl
 
-    ;; Check to see if we need to copy a wave and then do so
+    ;; Check to see if we need to copy the wave
     ld hl, current_wave
     cp [hl]
     jr z, .no_wave_copy
     ld [hl], a
+    ;; Get pointer to new wave
     swap a
-    add_a_ind_ret_hl waves
+    ld hl, waves
+    add [hl]
+    inc hl
+    ld h, [hl]
+    ld l, a
+    adc h
+    sub l
+    ld h, a
 
     xor a
     ldh [rAUD3ENA], a
@@ -1442,7 +1519,15 @@ ENDR
     ldh [rAUD3ENA], a
 
 .no_wave_copy:
-    ld a, [de]
+    pop hl
+    ld a, [hl+]
+    ld [table3], a
+    ld a, [hl+]
+    ld [table3+1], a
+    xor a
+    ld [table_row3], a
+
+    ld a, [hl]
 
 .write_mask3:
     ld [highmask3], a
@@ -1454,21 +1539,37 @@ ENDR
     pop af
     call c, play_ch3_note
 
+    ld a, [table3]
+    ld c, a
+    ld a, [table3+1]
+    ld b, a
+    or c
+    ld hl, table_row3
+    ld e, 2
+    call nz, do_table
+
 process_ch4:
     ld hl, pattern4
     ld a, [hl+]
     ld c, a
     ld b, [hl]
     call get_current_row
-    ld [channel_note4], a
     cp LAST_NOTE
-    push af
+
+    push af ; Save carry for conditonally calling note
     jr nc, .do_setvol4
 
-    call get_note_poly
-    ld [temp_note_value], a
+    ld [channel_note4], a
 
-    ld de, 0
+    ;; No toneporta check because it's not supported for CH4 anyway
+
+    call get_note_poly
+    ld [channel_period4], a
+
+    ld hl, noise_instruments
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
     call setup_instrument_pointer
 
     ld a, [highmask4]
@@ -1477,24 +1578,28 @@ process_ch4:
 
     checkMute 3, .do_setvol4
 
-    load_hl_ind noise_instruments
-    sla e
-    add hl, de
-
     ld a, [hl+]
     ldh [rAUD4ENV], a
+
+    ld a, [hl+]
+    ld [table4], a
+    ld a, [hl+]
+    ld [table4+1], a
+    xor a
+    ld [table_row4], a
 
     ld a, [hl]
     and %00111111
     ldh [rAUD4LEN], a
 
-    ld a, [temp_note_value]
+    ld a, [channel_period4]
     ld d, a
     ld a, [hl]
     and %10000000
     swap a
+    ld [step_width4], a
     or d
-    ld [temp_note_value], a
+    ld [channel_period4], a
 
     ld a, [hl]
     and %01000000
@@ -1509,8 +1614,17 @@ process_ch4:
     pop af
     call c, play_ch4_note
 
+    ld a, [table4]
+    ld c, a
+    ld a, [table4+1]
+    ld b, a
+    or c
+    ld hl, table_row4
+    ld e, 3
+    call nz, do_table
+
     ;; finally just update the tick/order/row values
-    jp process_tick
+    jp tick_time
 
 process_effects:
     ;; Only do effects if not on tick zero
@@ -1527,9 +1641,20 @@ process_effects:
     jr z, .after_effect1
 
     ld e, 0
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
+;; TODO: Deduplicate this code by moving it into do_table?
 .after_effect1:
+    ld a, [table1]
+    ld c, a
+    ld a, [table1+1]
+    ld b, a
+    or c
+    ld hl, table_row1
+    ld e, 0
+    call nz, do_table
+
+.process_ch2:
     checkMute 1, .after_effect2
 
     ld hl, pattern2
@@ -1543,9 +1668,19 @@ process_effects:
     jr z, .after_effect2
 
     ld e, 1
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect2:
+    ld a, [table2]
+    ld c, a
+    ld a, [table2+1]
+    ld b, a
+    or c
+    ld hl, table_row2
+    ld e, 1
+    call nz, do_table
+
+.process_ch3:
     checkMute 2, .after_effect3
 
     ld hl, pattern3
@@ -1559,9 +1694,19 @@ process_effects:
     jr z, .after_effect3
 
     ld e, 2
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect3:
+    ld a, [table3]
+    ld c, a
+    ld a, [table3+1]
+    ld b, a
+    or c
+    ld hl, table_row3
+    ld e, 2
+    call nz, do_table
+
+.process_ch4:
     checkMute 3, .after_effect4
 
     ld hl, pattern4
@@ -1569,72 +1714,42 @@ process_effects:
     ld c, a
     ld b, [hl]
     call get_current_row
-    cp LAST_NOTE
-    jr nc, .done_macro
-    ld h, a
 
-    load_de_ind noise_instruments
-    call setup_instrument_pointer_ch4
-    jr z, .done_macro ; No instrument, thus no macro
-
-    ld a, [tick]
-    cp 7
-    jr nc, .done_macro
-
-    inc de
-
-    ld l, a
-    ld a, h
-    ld h, 0
-    add hl, de
-    add [hl]
-    call get_note_poly
-    ld l, a
-    ld a, [de]
-    ld e, a
-    and %10000000
-    swap a
-    or l
-    ldh [rAUD4POLY], a
-
-    ld a, e
-    and %01000000
-    ldh [rAUD4GO], a
-
-.done_macro:
     ld a, c
     or a
     jr z, .after_effect4
 
     ld e, 3
-    call do_effect      ; make sure we never return with ret_dont_call_playnote macro
+    call do_effect      ; make sure we never return with ret_dont_play_note!!
 
 .after_effect4:
+    ld a, [table4]
+    ld c, a
+    ld a, [table4+1]
+    ld b, a
+    or c
+    ld hl, table_row4
+    ld e, 3
+    call nz, do_table
 
-process_tick:
+tick_time:
     ld hl, counter
     inc [hl]
 
+    assert counter + 1 == tick
+    inc hl ; ld hl, tick
+    inc [hl] ; Increment tick counter
+
+    ;; Should we switch to the next row?
     ld a, [ticks_per_row]
-    ld b, a
+    sub [hl]
+    ret nz ; Nope.
+    ld [hl+], a ; Reset tick to 0
+    ;; Below code relies on a == 0
 
-    ld hl, tick
-    ld a, [hl]
-    inc a
-
-    cp b
-    jr z, .newrow
-
-    ld [hl], a
-    ret
-
-.newrow:
-    ;; Reset tick to 0
-    ld [hl], 0
-
+    assert tick + 1 == row_break
     ;; Check if we need to perform a row break or pattern break
-    ld a, [row_break]
-    or a
+    or [hl] ; a == 0, so this is `ld a, [hl]` that also alters flags
     jr z, .no_break
 
     ;; These are offset by one so we can check to see if they've
@@ -1642,13 +1757,12 @@ process_tick:
     dec a
     ld b, a
 
-    ld hl, row_break
     xor a
-    ld [hl-], a
+    ld [hl+], a
+    assert row_break + 1 == next_order
     or [hl]     ; a = [next_order], zf = ([next_order] == 0)
-    ld [hl], 0
-
     jr z, .neworder
+    ld [hl], 0
 
     dec a
     add a ; multiply order by 2 (they are words)
@@ -1659,7 +1773,6 @@ process_tick:
     ;; Increment row.
     ld a, [row]
     inc a
-    ld b, a
     cp PATTERN_LENGTH
     jr nz, .noreset
 
@@ -1681,8 +1794,8 @@ process_tick:
     ld c, a
     call load_patterns
 
-.noreset:
     ld a, b
+.noreset:
     ld [row], a
 
 IF DEF(PREVIEW_MODE)
