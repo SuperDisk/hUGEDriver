@@ -453,7 +453,10 @@ update_channel_freq:
     ld d, h
     ld a, e
     call get_note_poly
+    ld hl, step_width4
+    or [hl]
     ldh [rAUD4POLY], a
+
     ld a, d
     ldh [rAUD4GO], a
     ret
@@ -590,14 +593,14 @@ do_table:
     ld e, a
     inc b
     bit 2, b
+    ld c, d
     jr nz, .is_ch4
 
     call get_note_period
-    ld a, d
     ld d, h
     ld e, l
-    ld h, a
 .is_ch4:
+    ld h, c
     dec b
     call update_channel_freq.nonzero_highmask
 
