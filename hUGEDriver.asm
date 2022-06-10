@@ -1,8 +1,6 @@
 include "include/hardware.inc"
 include "include/hUGE.inc"
 
-PURGE PREVIEW_MODE
-
 add_a_to_r16: MACRO
     add LOW(\1)
     ld LOW(\1), a
