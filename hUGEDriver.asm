@@ -750,21 +750,52 @@ fx_set_duty:
     ;; $980 = 50%
     ;; $9C0 = 75%
 
-    ld a, b
-    or a
     ld a, [mute_channels]
-    jr z, .chan1
-.chan2:
-    retMute 1
-    ld a, c
-    ldh [rAUD2LEN], a
-    ret
+    dec b
+    jr z, .chan2
+    dec b
+    jr z, .chan3
 .chan1:
     retMute 0
     ld a, c
     ldh [rAUD1LEN], a
     ret
+.chan2:
+    retMute 1
+    ld a, c
+    ldh [rAUD2LEN], a
+    ret
+.chan3:
+    retMute 2
 
+    ld a, c
+    ld hl, current_wave
+
+update_ch3_waveform:
+    ld [hl], a
+    ;; Get pointer to new wave
+    swap a
+    ld hl, waves
+    add [hl]
+    inc hl
+    ld h, [hl]
+    ld l, a
+    adc h
+    sub l
+    ld h, a
+
+    xor a
+    ldh [rAUD3ENA], a
+
+FOR OFS, 16
+    ld a, [hl+]
+    ldh [_AUD3WAVERAM + OFS], a
+ENDR
+
+    ld a, %10000000
+    ldh [rAUD3ENA], a
+
+    ret
 
 ;;; Processes (global) effect F, "set speed".
 ;;; Param: C = New amount of ticks per row
@@ -1495,28 +1526,7 @@ process_ch3:
     ld hl, current_wave
     cp [hl]
     jr z, .no_wave_copy
-    ld [hl], a
-    ;; Get pointer to new wave
-    swap a
-    ld hl, waves
-    add [hl]
-    inc hl
-    ld h, [hl]
-    ld l, a
-    adc h
-    sub l
-    ld h, a
-
-    xor a
-    ldh [rAUD3ENA], a
-
-FOR OFS, 16
-    ld a, [hl+]
-    ldh [_AUD3WAVERAM + OFS], a
-ENDR
-
-    ld a, %10000000
-    ldh [rAUD3ENA], a
+    call update_ch3_waveform
 
 .no_wave_copy:
     pop hl
