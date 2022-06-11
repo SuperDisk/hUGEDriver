@@ -60,7 +60,8 @@ SECTION "LCD controller status interrupt", ROM0[$0048]
     jp isr_wrapper
 
 SECTION "Timer overflow interrupt", ROM0[$0050]
-    reti
+    nop
+    jp isr_wrapper
 
 SECTION "Serial transfer completion interrupt", ROM0[$0058]
     reti
@@ -157,6 +158,16 @@ _init:
     ld hl, SONG_DESCRIPTOR
     call hUGE_init
 
+IF DEF(USE_TIMER)
+    ld a, TIMER_MODULO
+    ldh [rTMA], a
+    ld a, 4 ; 4096 hz
+    ldh [rTAC], a
+
+    ld a, IEF_TIMER
+    ld [rIE], a
+    ei
+ELSE
     ;; Enable the HBlank interrupt on scanline 0
     ld a, [rSTAT]
     or a, STATF_LYC
@@ -167,6 +178,7 @@ _init:
     ld a, IEF_LCDC
     ld [rIE], a
     ei
+ENDC
 
 _halt:
     ; Do nothing, forever
