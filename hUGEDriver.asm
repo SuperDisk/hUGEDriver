@@ -19,13 +19,6 @@ sub_from_r16: MACRO ;; (high, low, value)
     ld \1, a
 ENDM
 
-load_de_ind: MACRO
-    ld a, [\1]
-    ld e, a
-    ld a, [\1+1]
-    ld d, a
-ENDM
-
 retMute: MACRO
     bit \1, a
     ret nz
@@ -981,13 +974,12 @@ fx_vibrato:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF B DE HL
 fx_arpeggio:
-    ret z
 
     ld d, 4
     call ptr_to_channel_member
     ld d, [hl]
 
-    ld a, [tick]
+    ld a, [counter]
     dec a
 
     ;; TODO: A crappy modulo, because it's not a multiple of four :(
