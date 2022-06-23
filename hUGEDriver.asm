@@ -1743,6 +1743,9 @@ process_effects:
     call nz, do_table
 
 tick_time:
+IF DEF(PREVIEW_MODE)
+    db $f4
+ENDC
     ld hl, counter
     inc [hl]
 
