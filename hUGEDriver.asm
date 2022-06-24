@@ -1324,15 +1324,11 @@ play_note:
 
 ;;; Computes the pointer to an instrument.
 ;;; Param: B = The instrument's ID
-;;; Param: DE = Instrument pointer table
-;;; Return: DE = Pointer to the instrument
+;;; Param: HL = Instrument pointer table
+;;; Return: HL = Pointer to the instrument
 ;;; Return: ZF = Set if and only if there was no instrument (ID == 0)
 ;;; Destroy: AF
 setup_instrument_pointer:
-    ;; Call with:
-    ;; Instrument/High nibble of effect in B
-    ;; Stores whether the instrument was real in the Z flag
-    ;; Stores the instrument pointer in DE
     ld a, b
     and %11110000
     swap a
@@ -1340,10 +1336,11 @@ setup_instrument_pointer:
 
     dec a ; Instrument 0 is "no instrument"
 .finish:
-    ;; Shift left thrice to multiply by 8
+    ;; Multiply by 6
     add a
+    ld e, a
     add a
-    add a
+    add e
 
     add_a_to_r16 hl
 
