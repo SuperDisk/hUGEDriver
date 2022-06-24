@@ -814,10 +814,16 @@ hUGE_set_position::
 ;;; Param: C = ID of the order to jump to
 ;;; Destroy: A
 fx_pos_jump:
-    ld a, 1
-    ld [row_break], a
-    ld a, c
-    ld [next_order], a
+    ret nz
+
+    ld hl, row_break
+
+    or [hl] ; a = 0 since we know we're on tick 0
+    jr nz, .already_broken
+    ld [hl], 1
+.already_broken:
+    inc hl
+    ld [hl], c
     ret
 
 
@@ -825,6 +831,8 @@ fx_pos_jump:
 ;;; Param: C = ID of the next order's row to start on
 ;;; Destroy: A
 fx_pattern_break:
+    ret nz
+
     ld a, c
     ld [row_break], a
     ret
