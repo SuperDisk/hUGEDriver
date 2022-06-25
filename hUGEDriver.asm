@@ -646,7 +646,6 @@ do_effect:
     jr z, .no_offset
     inc hl
 .no_offset:
-
     ld b, e
     ld a, [tick]
     or a ; We can return right off the bat if it's tick zero
@@ -691,6 +690,8 @@ fx_set_master_volume:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: Anything the routine does
 fx_call_routine:
+    nop ; In place of `ret cc`. Allows to be used in subpatterns
+
     ld hl, routines
     ld a, $0f
     and c
@@ -1013,6 +1014,7 @@ fx_vibrato:
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: AF B DE HL
 fx_arpeggio:
+    nop ; In place of `ret cc`. Allows to be used in subpatterns
 
     ld d, 4
     call ptr_to_channel_member
