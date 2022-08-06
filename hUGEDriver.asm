@@ -756,6 +756,8 @@ fx_set_duty:
     jr z, .chan2
     dec b
     jr z, .chan3
+    dec b
+    jr z, .chan4
 .chan1:
     retMute 0
     ld a, c
@@ -766,7 +768,14 @@ fx_set_duty:
     ld a, c
     ldh [rAUD2LEN], a
     ret
-.chan3:
+.chan4:
+    retMute 4
+    ldh a, [rAUD4POLY]
+    res 3, a
+    or c
+    ldh [rAUD4POLY], a
+    ret
+.chan3: ; Must go last since it falls through
     retMute 2
 
     ld a, c
