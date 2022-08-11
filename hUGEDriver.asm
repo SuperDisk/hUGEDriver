@@ -82,6 +82,10 @@ next_order: db
 row: db
 current_order: db
 
+IF DEF(PREVIEW_MODE)
+loop_order: db
+ENDC
+
 channels:
 ;;;;;;;;;;;
 ;;Channel 1
@@ -1807,6 +1811,14 @@ ENDC
 
     ld b, 0
 .neworder:
+IF DEF(PREVIEW_MODE)
+    ld a, [loop_order]
+    and a
+    jr z, .no_loop_order
+    xor a
+    jr .noreset
+.no_loop_order:
+ENDC
     ;; Increment order and change loaded patterns
     ld a, [order_cnt]
     ld c, a
