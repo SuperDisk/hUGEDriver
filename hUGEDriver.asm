@@ -1332,9 +1332,6 @@ fx_note_delay:
 ;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
 ;;; Destroy: AF D HL
 play_note:
-    ld d, 0
-    call ptr_to_channel_member
-
     ld a, b
     add a
     add LOW(play_note_routines)
