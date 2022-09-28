@@ -45,7 +45,7 @@ include "noise_instrument.htt"
 ;; Routines
 ;;;;;;;;;;;;;
 
-loadRoutine: MACRO
+MACRO loadRoutine
 __hUGE_Routine_\1:
 include "routine\1.htt"
 __end_hUGE_Routine_\1:
