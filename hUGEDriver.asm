@@ -1,7 +1,7 @@
 include "include/hardware.inc"
 include "include/hUGE.inc"
 
-add_a_to_r16: MACRO
+MACRO add_a_to_r16
     add LOW(\1)
     ld LOW(\1), a
     adc HIGH(\1)
@@ -10,7 +10,7 @@ add_a_to_r16: MACRO
 ENDM
 
 ;; Thanks PinoBatch!
-sub_from_r16: MACRO ;; (high, low, value)
+MACRO sub_from_r16 ;; (high, low, value)
     ld a, \2
     sub \3
     ld \2, a
@@ -19,12 +19,12 @@ sub_from_r16: MACRO ;; (high, low, value)
     ld \1, a
 ENDM
 
-retMute: MACRO
+MACRO retMute
     bit \1, a
     ret nz
 ENDM
 
-checkMute: MACRO
+MACRO checkMute
     ld a, [mute_channels]
     bit \1, a
     jr nz, \2
