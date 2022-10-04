@@ -19,13 +19,6 @@ ds $400 ; padding bytes that will be removed manually
 
 SECTION "Code", ROM0[$70+$400]
 gbs_init:
-    ld a, 0
-    ld [rIF], a
-    inc a
-    ld [rIE], a
-    halt
-    nop
-
     ; Enable sound globally
     ld a, $80
     ld [rAUDENA], a
