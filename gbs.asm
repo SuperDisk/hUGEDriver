@@ -1,4 +1,4 @@
-include "include/HARDWARE.INC"
+include "include/hardware.inc"
 
 SECTION "GBS Header", ROM0[$0]
 db "GBS" ; magic
