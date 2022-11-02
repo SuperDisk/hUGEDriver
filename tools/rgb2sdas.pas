@@ -164,9 +164,9 @@ begin
     Read(Result, SizeOf(TRObj) - SizeOf(Result.Symbols) - SizeOf(Result.Sections) - SizeOf(Result.Nodes));
 
     if (not CompareMem(@Result.ID, @Sign, sizeof(Result.ID))) or (not InRange(Result.RevisionNumber, 6, 8)) then
-      Die(
-        'Unsupported object file version! This version of rgb2sdas supports RGB9, revision 6, 7, or 8 files. The provided file is '+
-        Result.ID+', revision '+IntToStr(Result.RevisionNumber)+'.'
+      Writeln(
+        'Untested object file version! This version of rgb2sdas supports RGB9, revision 6, 7, or 8 files. The provided file is '+
+        Result.ID+', revision '+IntToStr(Result.RevisionNumber)+'. Things may break !'
       );
 
     SetLength(Result.Symbols, Result.NumberOfSymbols);
