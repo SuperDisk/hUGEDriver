@@ -61,7 +61,11 @@ DEF _HRAM        EQU $FF80 ; $FF80->$FFFE
 ; *** MBC5 Equates ***
 
 DEF rRAMG        EQU $0000 ; $0000->$1fff
+if def(TARGET_MEGADUCK)
+DEF rROMB0       EQU $0001 ; $0001->$0001
+else
 DEF rROMB0       EQU $2000 ; $2000->$2fff
+endc
 DEF rROMB1       EQU $3000 ; $3000->$3fff - If more than 256 ROM banks are present.
 DEF rRAMB        EQU $4000 ; $4000->$5fff - Bit 3 enables rumble (if present)
 
@@ -157,7 +161,11 @@ DEF rIF EQU $FF0F
 ; -- Bit 2-0 - Number of sweep shift (# 0-7)
 ; -- Sweep Time: (n*7.8ms)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR10 EQU $FF20
+else
 DEF rNR10 EQU $FF10
+endc
 DEF rAUD1SWEEP EQU rNR10
 
 DEF AUD1SWEEP_UP   EQU %00000000
@@ -171,7 +179,11 @@ DEF AUD1SWEEP_DOWN EQU %00001000
 ; -- Bit 7-6 - Wave Pattern Duty (00:12.5% 01:25% 10:50% 11:75%)
 ; -- Bit 5-0 - Sound length data (# 0-63)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR11 EQU $FF22
+else
 DEF rNR11 EQU $FF11
+endc
 DEF rAUD1LEN EQU rNR11
 
 
@@ -185,7 +197,11 @@ DEF rAUD1LEN EQU rNR11
 ; --           1: Range of increase
 ; -- Bit 2-0 - Number of envelope sweep (# 0-7)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR12 EQU $FF21
+else
 DEF rNR12 EQU $FF12
+endc
 DEF rAUD1ENV EQU rNR12
 
 
@@ -193,7 +209,11 @@ DEF rAUD1ENV EQU rNR12
 ; -- AUD1LOW/NR13 ($FF13)
 ; -- Frequency low byte (W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR13 EQU $FF23
+else
 DEF rNR13 EQU $FF13
+endc
 DEF rAUD1LOW EQU rNR13
 
 
@@ -205,7 +225,11 @@ DEF rAUD1LOW EQU rNR13
 ; -- Bit 6   - Counter/consecutive selection
 ; -- Bit 2-0 - Frequency's higher 3 bits
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR14 EQU $FF24
+else
 DEF rNR14 EQU $FF14
+endc
 DEF rAUD1HIGH EQU rNR14
 
 
@@ -215,7 +239,11 @@ DEF rAUD1HIGH EQU rNR14
 ; --
 ; -- see AUD1LEN for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR21 EQU $FF25
+else
 DEF rNR21 EQU $FF16
+endc
 DEF rAUD2LEN EQU rNR21
 
 
@@ -225,7 +253,11 @@ DEF rAUD2LEN EQU rNR21
 ; --
 ; -- see AUD1ENV for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR22 EQU $FF27
+else
 DEF rNR22 EQU $FF17
+endc
 DEF rAUD2ENV EQU rNR22
 
 
@@ -233,7 +265,11 @@ DEF rAUD2ENV EQU rNR22
 ; -- AUD2LOW/NR23 ($FF18)
 ; -- Frequency low byte (W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR23 EQU $FF28
+else
 DEF rNR23 EQU $FF18
+endc
 DEF rAUD2LOW EQU rNR23
 
 
@@ -243,7 +279,11 @@ DEF rAUD2LOW EQU rNR23
 ; --
 ; -- see AUD1HIGH for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR24 EQU $FF29
+else
 DEF rNR24 EQU $FF19
+endc
 DEF rAUD2HIGH EQU rNR24
 
 
@@ -253,7 +293,11 @@ DEF rAUD2HIGH EQU rNR24
 ; --
 ; -- Bit 7   - Sound ON/OFF (1=ON,0=OFF)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR30 EQU $FF2A
+else
 DEF rNR30 EQU $FF1A
+endc
 DEF rAUD3ENA EQU rNR30
 
 
@@ -263,7 +307,11 @@ DEF rAUD3ENA EQU rNR30
 ; --
 ; -- Bit 7-0 - Sound length
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR31 EQU $FF2B
+else
 DEF rNR31 EQU $FF1B
+endc
 DEF rAUD3LEN EQU rNR31
 
 
@@ -277,7 +325,11 @@ DEF rAUD3LEN EQU rNR31
 ; --           10: 1/2
 ; --           11: 1/4
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR32 EQU $FF2C
+else
 DEF rNR32 EQU $FF1C
+endc
 DEF rAUD3LEVEL EQU rNR32
 
 
@@ -287,7 +339,11 @@ DEF rAUD3LEVEL EQU rNR32
 ; --
 ; -- see AUD1LOW for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR33 EQU $FF2E
+else
 DEF rNR33 EQU $FF1D
+endc
 DEF rAUD3LOW EQU rNR33
 
 
@@ -297,7 +353,11 @@ DEF rAUD3LOW EQU rNR33
 ; --
 ; -- see AUD1HIGH for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR34 EQU $FF2D
+else
 DEF rNR34 EQU $FF1E
+endc
 DEF rAUD3HIGH EQU rNR34
 
 
@@ -307,7 +367,11 @@ DEF rAUD3HIGH EQU rNR34
 ; --
 ; -- Bit 5-0 - Sound length data (# 0-63)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR41 EQU $FF40
+else
 DEF rNR41 EQU $FF20
+endc
 DEF rAUD4LEN EQU rNR41
 
 
@@ -317,7 +381,11 @@ DEF rAUD4LEN EQU rNR41
 ; --
 ; -- see AUD1ENV for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR42 EQU $FF42
+else
 DEF rNR42 EQU $FF21
+endc
 DEF rAUD4ENV EQU rNR42
 
 
@@ -335,7 +403,11 @@ DEF rAUD4ENV EQU rNR42
 ; --           000: f/4   001: f/8   010: f/16  011: f/24
 ; --           100: f/32  101: f/40  110: f/48  111: f/56  (f=4.194304 Mhz)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR43 EQU $FF41
+else
 DEF rNR43 EQU $FF22
+endc
 DEF rAUD4POLY EQU rNR43
 
 
@@ -345,7 +417,11 @@ DEF rAUD4POLY EQU rNR43
 ; -- Bit 7 -   Inital
 ; -- Bit 6 -   Counter/consecutive selection
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR44 EQU $FF43
+else
 DEF rNR44 EQU $FF23
+endc
 DEF rAUD4GO EQU rNR44
 
 
@@ -358,7 +434,11 @@ DEF rAUD4GO EQU rNR44
 ; -- Bit 3   - Vin->SO1 ON/OFF (Vin??)
 ; -- Bit 2-0 - SO1 output level (volume) (# 0-7)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR50 EQU $FF44
+else
 DEF rNR50 EQU $FF24
+endc
 DEF rAUDVOL EQU rNR50
 
 DEF AUDVOL_VIN_LEFT  EQU %10000000 ; SO2
@@ -378,7 +458,11 @@ DEF AUDVOL_VIN_RIGHT EQU %00001000 ; SO1
 ; -- Bit 1   - Output sound 2 to SO1 terminal
 ; -- Bit 0   - Output sound 0 to SO1 terminal
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR51 EQU $FF46
+else
 DEF rNR51 EQU $FF25
+endc
 DEF rAUDTERM EQU rNR51
 
 ; SO2
@@ -403,7 +487,11 @@ DEF AUDTERM_1_RIGHT EQU %00000001
 ; -- Bit 1   - Sound 2 ON flag (read only)
 ; -- Bit 0   - Sound 1 ON flag (read only)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rNR52 EQU $FF45
+else
 DEF rNR52 EQU $FF26
+endc
 DEF rAUDENA EQU rNR52
 
 DEF AUDENA_ON    EQU %10000000
@@ -414,6 +502,26 @@ DEF AUDENA_OFF   EQU %00000000  ; sets all audio regs to 0!
 ; -- LCDC ($FF40)
 ; -- LCD Control (R/W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rLCDC EQU $FF10
+
+DEF LCDCF_OFF     EQU %00000000 ; LCD Control Operation
+DEF LCDCF_ON      EQU %10000000 ; LCD Control Operation
+DEF LCDCF_WIN9800 EQU %00000000 ; Window Tile Map Display Select
+DEF LCDCF_WIN9C00 EQU %00001000 ; Window Tile Map Display Select
+DEF LCDCF_WINOFF  EQU %00000000 ; Window Display
+DEF LCDCF_WINON   EQU %00100000 ; Window Display
+DEF LCDCF_BG8800  EQU %00000000 ; BG & Window Tile Data Select
+DEF LCDCF_BG8000  EQU %00010000 ; BG & Window Tile Data Select
+DEF LCDCF_BG9800  EQU %00000000 ; BG Tile Map Display Select
+DEF LCDCF_BG9C00  EQU %00000100 ; BG Tile Map Display Select
+DEF LCDCF_OBJ8    EQU %00000000 ; OBJ Construction
+DEF LCDCF_OBJ16   EQU %00000010 ; OBJ Construction
+DEF LCDCF_OBJOFF  EQU %00000000 ; OBJ Display
+DEF LCDCF_OBJON   EQU %00000001 ; OBJ Display
+DEF LCDCF_BGOFF   EQU %00000000 ; BG Display
+DEF LCDCF_BGON    EQU %01000000 ; BG Display
+else
 DEF rLCDC EQU $FF40
 
 DEF LCDCF_OFF     EQU %00000000 ; LCD Control Operation
@@ -432,6 +540,7 @@ DEF LCDCF_OBJOFF  EQU %00000000 ; OBJ Display
 DEF LCDCF_OBJON   EQU %00000010 ; OBJ Display
 DEF LCDCF_BGOFF   EQU %00000000 ; BG Display
 DEF LCDCF_BGON    EQU %00000001 ; BG Display
+endc
 ; "Window Character Data Select" follows BG
 
 
@@ -439,7 +548,11 @@ DEF LCDCF_BGON    EQU %00000001 ; BG Display
 ; -- STAT ($FF41)
 ; -- LCDC Status   (R/W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rSTAT EQU $FF11
+else
 DEF rSTAT EQU $FF41
+endc
 
 DEF STATF_LYC     EQU  %01000000 ; LYC=LY Coincidence (Selectable)
 DEF STATF_MODE10  EQU  %00100000 ; Mode 10
@@ -452,20 +565,25 @@ DEF STATF_OAM     EQU  %00000010 ; OAM-RAM is used by system
 DEF STATF_LCD     EQU  %00000011 ; Both OAM and VRAM used by system
 DEF STATF_BUSY    EQU  %00000010 ; When set, VRAM access is unsafe
 
-
 ; --
 ; -- SCY ($FF42)
 ; -- Scroll Y (R/W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rSCY EQU $FF12
+else
 DEF rSCY EQU $FF42
-
+endc
 
 ; --
 ; -- SCX ($FF43)
 ; -- Scroll X (R/W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rSCX EQU $FF13
+else
 DEF rSCX EQU $FF43
-
+endc
 
 ; --
 ; -- LY ($FF44)
@@ -473,8 +591,11 @@ DEF rSCX EQU $FF43
 ; --
 ; -- Values range from 0->153. 144->153 is the VBlank period.
 ; --
+if def(TARGET_MEGADUCK)
+DEF rLY EQU $FF18
+else
 DEF rLY EQU $FF44
-
+endc
 
 ; --
 ; -- LYC ($FF45)
@@ -482,15 +603,21 @@ DEF rLY EQU $FF44
 ; --
 ; -- When LY==LYC, STATF_LYCF will be set in STAT
 ; --
+if def(TARGET_MEGADUCK)
+DEF rLYC EQU $FF19
+else
 DEF rLYC EQU $FF45
-
+endc
 
 ; --
 ; -- DMA ($FF46)
 ; -- DMA Transfer and Start Address (W)
 ; --
+if def(TARGET_MEGADUCK)
+DEF rDMA EQU $FF1A
+else
 DEF rDMA EQU $FF46
-
+endc
 
 ; --
 ; -- BGP ($FF47)
@@ -501,8 +628,11 @@ DEF rDMA EQU $FF46
 ; -- Bit 3-2 - Intensity for %01
 ; -- Bit 1-0 - Intensity for %00
 ; --
+if def(TARGET_MEGADUCK)
+DEF rBGP EQU $FF1B
+else
 DEF rBGP EQU $FF47
-
+endc
 
 ; --
 ; -- OBP0 ($FF48)
@@ -510,8 +640,11 @@ DEF rBGP EQU $FF47
 ; --
 ; -- See BGP for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rOBP0 EQU $FF14
+else
 DEF rOBP0 EQU $FF48
-
+endc
 
 ; --
 ; -- OBP1 ($FF49)
@@ -519,8 +652,11 @@ DEF rOBP0 EQU $FF48
 ; --
 ; -- See BGP for info
 ; --
+if def(TARGET_MEGADUCK)
+DEF rOBP1 EQU $FF15
+else
 DEF rOBP1 EQU $FF49
-
+endc
 
 ; --
 ; -- WY ($FF4A)
@@ -529,8 +665,11 @@ DEF rOBP1 EQU $FF49
 ; -- 0 <= WY <= 143
 ; -- When WY = 0, the window is displayed from the top edge of the LCD screen.
 ; --
+if def(TARGET_MEGADUCK)
+DEF rWY EQU $FF16
+else
 DEF rWY EQU $FF4A
-
+endc
 
 ; --
 ; -- WX ($FF4B)
@@ -540,8 +679,11 @@ DEF rWY EQU $FF4A
 ; -- When WX = 7, the window is displayed from the left edge of the LCD screen.
 ; -- Values of 0-6 and 166 are unreliable due to hardware bugs.
 ; --
+if def(TARGET_MEGADUCK)
+DEF rWX EQU $FF17
+else
 DEF rWX EQU $FF4B
-
+endc
 
 ; --
 ; -- SPEED ($FF4D)
