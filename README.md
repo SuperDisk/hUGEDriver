@@ -1,15 +1,15 @@
-![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
-===
 
 # Fork of hUGEDriver for the Mega Duck (with compression)
-This is a fork of hUGEDriver which supports running on the Mega Duck (a console clone of the Game Boy with some register address and bit order changes).
+This is a fork of [hUGEDriver](https://github.com/SuperDisk/hUGEDriver) which supports running on the Mega Duck (a console clone of the Game Boy with some register address and bit order changes).
 
-More specifically it's a fork of a hUGEDriver version which plays compressed songs. That means it is ONLY compatible with songs exported from a version of hUGETracker that uses compression.
-- You can find that version of the Tracker here:
+More specifically it's a fork of a hUGEDriver version which plays compressed songs. That means it is ONLY compatible with songs exported from a version of hUGETracker that uses compression. Perfect for a 32K ROM.
+- You can find that original version of the Tracker here:
   - https://github.com/SuperDisk/hUGETracker/actions/runs/3010801289
 - And the original driver with compression here:
   - https://github.com/SuperDisk/hUGEDriver/tree/uncap
 
+
+The source edits for MegaDuck are not opitmized for now, they're just `ifdef`ed in for ease of seeing what has to be handled differently. The changes should not add too much overhead though.
 
 ### Binaries
 Check Releases for compiled, ready-to-use object files
@@ -28,14 +28,17 @@ Check Releases for compiled, ready-to-use object files
   - `rgb2sdas.exe hUGEDriver_with_compression_gbz80.obj`
   - Produces: `hUGEDriver_with_compression_gbz80.obj.o`
 
-# To make either resulting object file compatible with GBDK-2020 4.1.0+
+### To make either resulting object file compatible with GBDK-2020 4.1.0+
 - Edit the resulting `.o` file and replace `-mgbz80` with `-msm83`
 
 
 ---------------------------
+
 # Original Repo Readme Contents Below
 (Many thanks to SuperDisk for making hUGEDriver and hUGETracker!)
 ---------------------------
+![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
+===
 
 This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker](https://github.com/SuperDisk/hUGETracker).
 
