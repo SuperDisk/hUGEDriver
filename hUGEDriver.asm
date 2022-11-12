@@ -809,9 +809,17 @@ IF DEF(TARGET_MEGADUCK)
     ; Except CH3 which is NOT inverted on MegaDuck (as CH1/2/4 ENV are)
     ; Only the CH3 rNR32/rAUD3LEVEL addr LSByte has bit set on MegaDuck
     bit 3, c
-    jr nz, .duck_load_noswap
+    jr nz, .duck_load_ch3_volfix
     swap a
-.duck_load_noswap:
+    jr .duck_load_done
+.duck_load_ch3_volfix:
+    ; Translate NR32 volume. New Volume = ((0x00 - Volume) & 0x60)
+    ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
+    ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
+    cpl
+    add 1
+    and $60
+.duck_load_done:
 ENDC
     and %11110000
     swap a
@@ -833,6 +841,12 @@ IF DEF(TARGET_MEGADUCK)
     bit 3, c
     jr z, .duck_write_noswap
     swap a
+    ; Translate NR32 volume. New Volume = ((0x00 - Volume) & 0x60)
+    ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
+    ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
+    cpl
+    add 1
+    and $60
 .duck_write_noswap:
 ELSE
     swap a
@@ -1028,6 +1042,8 @@ ELSE
     ld l, a
     ld h, HIGH(rAUD1ENV)
 ENDC
+    ; MegaDuck NR12/22/42 nybble swaps don't matter for value of 0x00
+    ; Likewise NR32 Mute value is the same (Bits 6..5 = 00) for MegaDuck and GB
     xor a
     ld [hl+], a
     ld a, b
@@ -1116,14 +1132,28 @@ ENDC
     jr nc, .two
     or a
     jr z, .done ; Zero maps to zero
+IF DEF(TARGET_MEGADUCK)
+    ; Translate NR32 volume. New Volume = ((0x00 - Volume) & 0x60)
+    ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
+    ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
 .three:
-    ld a, %01100000
+    ld a, %00100000 ; 25%
     jr .done
 .two:
-    ld a, %01000000
+    ld a, %01000000 ; 50%
     jr .done
 .one:
-    ld a, %00100000
+    ld a, %01100000 ; 100%
+ELSE
+.three:
+    ld a, %01100000 ; 25%
+    jr .done
+.two:
+    ld a, %01000000 ; 50%
+    jr .done
+.one:
+    ld a, %00100000 ; 100%
+ENDC
 .done:
     ldh [rAUD3LEVEL], a
     ret
@@ -1565,6 +1595,14 @@ process_ch3:
     ldh [rAUD3LEN], a
     ld a, [de]
     inc de
+IF DEF(TARGET_MEGADUCK)
+    ; Translate NR32 volume. New Volume = ((0x00 - Volume) & 0x60)
+    ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
+    ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
+    cpl
+    add 1
+    and $60
+ENDC
     ldh [rAUD3LEVEL], a
     ld a, [de]
     inc de
