@@ -779,11 +779,15 @@ fx_set_duty:
     or c
     ldh [rAUD4POLY], a
     ret
-.chan3: ; Must go last since it falls through
+.chan3:
     retMute 2
 
     ld a, c
     ld hl, current_wave
+    call update_ch3_waveform
+
+    ld b, 2
+    jp play_note
 
 update_ch3_waveform:
     ld [hl], a
