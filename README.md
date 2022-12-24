@@ -19,11 +19,13 @@ Check Releases for compiled, ready-to-use object files
 - Have RGBDS 0.5.2 installed (other versions may work)
 
 - Mega Duck
+  - `cd gbdk_example`
   - `rgbasm -DGBDK -ohUGEDriver_megaduck_with_compression_gbz80.obj -i.. ../hUGEDriver_MegaDuck.asm`
-  - `rgb2sdas.exe ohUGEDriver_megaduck_with_compression_gbz80.obj`
-  - Produces: `ohUGEDriver_megaduck_with_compression_gbz80.obj.o`  
+  - `rgb2sdas.exe hUGEDriver_megaduck_with_compression_gbz80.obj`
+  - Produces: `ohUGEDriver_megaduck_with_compression_gbz80.obj.o`
 
 - Game Boy (if needed)
+  - `cd gbdk_example`
   - `rgbasm -DGBDK -ohUGEDriver_with_compression_gbz80.obj -i.. ../hUGEDriver.asm`
   - `rgb2sdas.exe hUGEDriver_with_compression_gbz80.obj`
   - Produces: `hUGEDriver_with_compression_gbz80.obj.o`

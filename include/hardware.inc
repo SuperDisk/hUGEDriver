@@ -320,10 +320,16 @@ DEF rAUD3LEN EQU rNR31
 ; -- Select output level
 ; --
 ; -- Bit 6-5 - Select output level
-; --           00: 0/1 (mute)
-; --           01: 1/1
-; --           10: 1/2
-; --           11: 1/4
+; --           Game Boy:
+; --             00: 0/1 (mute)
+; --             01: 1/1
+; --             10: 1/2
+; --             11: 1/4
+; --           MegaDuck:
+; --             00: 0/1 (mute)
+; --             01: 1/4 *
+; --             10: 1/2
+; --             11: 1/1 *
 ; --
 if def(TARGET_MEGADUCK)
 DEF rNR32 EQU $FF2C
@@ -331,6 +337,18 @@ else
 DEF rNR32 EQU $FF1C
 endc
 DEF rAUD3LEVEL EQU rNR32
+
+if def(TARGET_MEGADUCK)
+DEF AUDVOL_CH3_OFF  EQU %00000000
+DEF AUDVOL_CH3_LO   EQU %00100000
+DEF AUDVOL_CH3_MED  EQU %01000000
+DEF AUDVOL_CH3_HI   EQU %01100000
+else
+DEF AUDVOL_CH3_OFF  EQU %00000000
+DEF AUDVOL_CH3_LO   EQU %01100000
+DEF AUDVOL_CH3_MED  EQU %01000000
+DEF AUDVOL_CH3_HI   EQU %00100000
+endc
 
 
 ; --

@@ -817,7 +817,7 @@ IF DEF(TARGET_MEGADUCK)
     ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
     ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
     cpl
-    add 1
+    add $20 ; start bit rollover at bit 5 to ignore possible values in lower bits (vs add 1)
     and $60
 .duck_load_done:
 ENDC
@@ -845,7 +845,7 @@ IF DEF(TARGET_MEGADUCK)
     ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
     ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
     cpl
-    add 1
+    add $20 ; start bit rollover at bit 5 to ignore possible values in lower bits (vs add 1)
     and $60
 .duck_write_noswap:
 ELSE
@@ -1132,28 +1132,17 @@ ENDC
     jr nc, .two
     or a
     jr z, .done ; Zero maps to zero
-IF DEF(TARGET_MEGADUCK)
-    ; Translate NR32 volume. New Volume = ((0x00 - Volume) & 0x60)
+    ; NR32 volume
     ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
     ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
 .three:
-    ld a, %00100000 ; 25%
+    ld a, AUDVOL_CH3_LO ; 25%
     jr .done
 .two:
-    ld a, %01000000 ; 50%
+    ld a, AUDVOL_CH3_MED ; 50%
     jr .done
 .one:
-    ld a, %01100000 ; 100%
-ELSE
-.three:
-    ld a, %01100000 ; 25%
-    jr .done
-.two:
-    ld a, %01000000 ; 50%
-    jr .done
-.one:
-    ld a, %00100000 ; 100%
-ENDC
+    ld a, AUDVOL_CH3_HI ; 100%
 .done:
     ldh [rAUD3LEVEL], a
     ret
@@ -1600,7 +1589,7 @@ IF DEF(TARGET_MEGADUCK)
     ; GB: Bits:6..5 : 00 = mute, 01 = 100%, 10 = 50%, 11 = 25%
     ; MD: Bits:6..5 : 00 = mute, 11 = 100%, 10 = 50%, 01 = 25%
     cpl
-    add 1
+    add $20 ; start bit rollover at bit 5 to ignore possible values in lower bits (vs add 1)
     and $60
 ENDC
     ldh [rAUD3LEVEL], a
