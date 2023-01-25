@@ -81,7 +81,7 @@
 #define ___ 90
 
 // tick is a tick number; the high byte of param is channel and the low byte of param is routine id
-typedef void (*hUGERoutine_t)(unsigned char tick, unsigned int param, unsigned char ch);
+typedef void (*hUGERoutine_t)(unsigned char tick, unsigned int param);
 
 typedef struct hUGEDutyInstr_t {
   const unsigned char sweep;
