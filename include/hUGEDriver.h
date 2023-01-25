@@ -119,29 +119,22 @@ typedef struct hUGESong_t {
 
 // initialize the driver with song data
 void hUGE_init(const hUGESong_t * song) OLDCALL;
-void hUGE_init_banked(const hUGESong_t * song) BANKED OLDCALL;
 
 // driver routine
-void hUGE_dosound() OLDCALL;
-void hUGE_dosound_banked() BANKED OLDCALL;
+void hUGE_dosound();
 
 enum hUGE_channel_t {HT_CH1 = 0, HT_CH2, HT_CH3, HT_CH4};
 enum hUGE_mute_t    {HT_CH_PLAY = 0, HT_CH_MUTE};
 
 void hUGE_mute_channel(enum hUGE_channel_t ch, enum hUGE_mute_t mute) OLDCALL;
-void hUGE_mute_channel_banked(enum hUGE_channel_t ch, enum hUGE_mute_t mute) BANKED OLDCALL;
 
 void hUGE_set_position(unsigned char pattern) OLDCALL;
-void hUGE_set_position_banked(unsigned char pattern) BANKED OLDCALL;
 
 extern volatile unsigned char hUGE_current_wave;
 
 extern volatile unsigned char hUGE_mute_mask;
 
 inline void hUGE_reset_wave() {
-	hUGE_current_wave = 100;
-}
-inline void hUGE_reset_wave_banked() {
 	hUGE_current_wave = 100;
 }
 
