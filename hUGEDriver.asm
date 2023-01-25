@@ -725,16 +725,6 @@ fx_call_routine:
 
     ld a, [tick]
     or a ; set zero flag if tick 0 for compatibility
-IF DEF(GBDK) ; Pass the tick counter as a SDCC call parameter
-    push af
-    inc sp
-    push bc
-    call .call_hl
-    add sp, 3
-    ret
-
-.call_hl:
-ENDC
     jp hl
 
 
