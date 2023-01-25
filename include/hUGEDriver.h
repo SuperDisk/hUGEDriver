@@ -80,7 +80,8 @@
 #define LAST_NOTE 72
 #define ___ 90
 
-typedef void (*hUGERoutine_t)(unsigned char param, unsigned char ch, unsigned char tick) OLDCALL;
+// tick is a tick number; the high byte of param is channel and the low byte of param is routine id
+typedef void (*hUGERoutine_t)(unsigned char tick, unsigned int param, unsigned char ch);
 
 typedef struct hUGEDutyInstr_t {
   const unsigned char sweep;
@@ -118,7 +119,7 @@ typedef struct hUGESong_t {
 } hUGESong_t;
 
 // initialize the driver with song data
-void hUGE_init(const hUGESong_t * song) OLDCALL;
+void hUGE_init(const hUGESong_t * song);
 
 // driver routine
 void hUGE_dosound();
@@ -126,9 +127,9 @@ void hUGE_dosound();
 enum hUGE_channel_t {HT_CH1 = 0, HT_CH2, HT_CH3, HT_CH4};
 enum hUGE_mute_t    {HT_CH_PLAY = 0, HT_CH_MUTE};
 
-void hUGE_mute_channel(enum hUGE_channel_t ch, enum hUGE_mute_t mute) OLDCALL;
+void hUGE_mute_channel(enum hUGE_channel_t ch, enum hUGE_mute_t mute);
 
-void hUGE_set_position(unsigned char pattern) OLDCALL;
+void hUGE_set_position(unsigned char pattern);
 
 extern volatile unsigned char hUGE_current_wave;
 

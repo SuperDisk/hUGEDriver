@@ -148,6 +148,12 @@ end_zero:
 
 SECTION "Sound Driver", ROM0
 
+IF DEF(GBDK)
+_hUGE_init::
+    ld h, d
+    ld l, e
+ENDC
+
 ;;; Sets up hUGEDriver to play a song.
 ;;; !!! BE SURE THAT `hUGE_dosound` WILL NOT BE CALLED WHILE THIS RUNS !!!
 ;;; Param: HL = Pointer to the "song descriptor" you wish to load (typically exported by hUGETracker).
@@ -240,6 +246,11 @@ ENDC
     inc de
     ret
 
+IF DEF(GBDK)
+_hUGE_mute_channel::
+    ld b, a
+    ld c, e
+ENDC
 
 ;;; Sets a channel's muting status.
 ;;; Muted channels are left entirely alone by the driver, so that you can repurpose them,
@@ -826,6 +837,11 @@ fx_set_speed:
     ld [ticks_per_row], a
     ret
 
+
+IF DEF(GBDK)
+_hUGE_set_position::
+    ld c, a
+ENDC
 
 hUGE_set_position::
 ;;; Processes (global) effect B, "position jump".
@@ -1847,51 +1863,3 @@ ENDC
 
 note_table:
 include "include/hUGE_note_table.inc"
-
-
-IF DEF(GBDK)
-
-SECTION "hUGEDriver GBDK wrappers", ROM0
-
-_hUGE_init_banked::
-    ld hl, sp+2+4
-    jr continue_init
-_hUGE_init::
-    ld hl, sp+2
-continue_init:
-    push bc
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-    call hUGE_init
-    pop bc
-    ret
-
-_hUGE_mute_channel_banked::
-    ld hl, sp+3+4
-    jr continue_mute
-_hUGE_mute_channel::
-    ld hl, sp+3
-continue_mute:
-    push bc
-    ld a, [hl-]
-    and 1
-    ld c, a
-    ld b, [hl]
-    call hUGE_mute_channel
-    pop  bc
-    ret
-
-_hUGE_set_position_banked::
-    ld hl, sp+2+4
-    jr continue_set_position
-_hUGE_set_position::
-    ld hl, sp+2
-continue_set_position:
-    push bc
-    ld c, [hl]
-    call hUGE_set_position
-    pop  bc
-    ret
-
-ENDC
