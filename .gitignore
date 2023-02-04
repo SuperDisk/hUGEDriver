@@ -9,6 +9,7 @@ obj/
 *.htt
 *.exe
 *.bak
+*.lib
 
 rgbasm
 rgbfix
