@@ -11,9 +11,15 @@ jobs:
       - name: Install build dependencies
         shell: bash
         run: |
+          sudo apt -qq update
+          sudo apt install -yq bison
+
+          wget 'https://github.com/gbdev/rgbds/releases/download/v0.6.1/rgbds-0.6.1.tar.gz' -O- | tar xv rgbds/{include,src,Makefile}
+          pushd rgbds
+          make -j4 rgbasm rgblink rgbfix Q=
+          popd
+
           wget https://github.com/gbdk-2020/gbdk-2020/releases/download/4.1.1/gbdk-linux64.tar.gz -O- | tar xz
-          sudo apt update
-          sudo apt install rgbds
 
       - name: Check out hUGEDriver
         uses: actions/checkout@v2
@@ -24,6 +30,8 @@ jobs:
         shell: bash
         run: |
           export PATH=$PATH:`realpath gbdk/bin`
+          export PATH=$PATH:`realpath rgbds`
+
           pushd hUGEDriver
           rgbasm -DGBDK -ohUGEDriver.obj hUGEDriver.asm
           python .\tools\rgb2sdas.py -o hUGEDriver.o hUGEDriver.obj
