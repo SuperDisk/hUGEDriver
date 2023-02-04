@@ -49,5 +49,5 @@ jobs:
       - name: Store build
         uses: actions/upload-artifact@v2
         with:
-          name: Build
+          name: hUGEDriver
           path: packaging/
