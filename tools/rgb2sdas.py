@@ -5,7 +5,8 @@ from pathlib import Path
 from optparse import OptionParser
 from struct import unpack, unpack_from, calcsize
 
-RGBDS_REVISION = 8
+RGBDS_REVISION_LOW = 6
+RGBDS_REVISION_HIGH = 9
 
 WRAM0 = 0; VRAM = 1; ROMX = 2; ROM0 = 3; HRAM = 4; WRAMX = 5; SRAM = 6; OAM = 7
 SYM_LOCAL = 0; SYM_IMPORT = 1; SYM_EXPORT = 2
@@ -45,7 +46,7 @@ class RGBObject(object):
         stream = ByteStream(data)
 
         self.id, self.rev = stream.read_record('<4si')
-        if (self.id != b'RGB9') or (self.rev != RGBDS_REVISION):
+        if (self.id != b'RGB9') or not (RGBDS_REVISION_LOW <= self.rev <= RGBDS_REVISION_HIGH):
             raise Exception("RGBDS Object version mismatch! Expected: {:d} received: {:d}".format(RGBDS_REVISION, self.rev))
 
         nSymbols, nSections, nNodes = stream.read_record('<iii')
