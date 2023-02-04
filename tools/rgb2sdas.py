@@ -27,7 +27,7 @@ class ByteStream(BytesIO):
             c = self.read(1)
             if (len(c) == 0): break
             if c[0] == 0: break
-            res.append(c.decode('ansi'))
+            res.append(c.decode('utf-8'))
         return ''.join(res)
 
     def read_array(self, fmt, count):
@@ -120,7 +120,7 @@ class RGBObject(object):
         return (False, {})
 
     def log(self):
-        print("ID: {:s} REV: {:d}".format(self.id.decode('ansi'), self.rev))
+        print("ID: {:s} REV: {:d}".format(self.id.decode('utf-8'), self.rev))
         print(self.Nodes)
         print(self.Symbols)
         print(self.Sections)
