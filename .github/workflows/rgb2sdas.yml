@@ -1,67 +1,53 @@
-name: Build rgb2sdas
+name: Package driver distribution
 
 on:
-  push:
-    paths:
-      - tools/rgb2sdas.pas
-      - .github/workflows/rgb2sdas.yml
-  pull_request:
-    paths:
-      - tools/rgb2sdas.pas
-      - .github/workflows/rgb2sdas.yml
+  - push
+  - pull_request
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-20.04
-          - macos-10.15
-          - windows-2019
-        include:
-          - os: ubuntu-20.04
-            name: Linux
-            outname: rgb2sdas
-          - os: macos-10.15
-            name: Mac
-            outname: rgb2sdas
-          - os: windows-2019
-            name: Windows
-            outname: rgb2sdas.exe
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Install Ubuntu dependencies
-        if: matrix.name == 'Linux'
-        run: |
-          sudo apt -qq update
-          sudo apt install -yq fpc
-
-      - name: Install macOS dependencies
-        if: matrix.name == 'Mac'
-        run: |
-          brew install fpc
-
-      - name: Install Windows dependencies
-        if: matrix.name == 'Windows'
+      - name: Install build dependencies
         shell: bash
         run: |
-          choco install lazarus
+          sudo apt -qq update
+          sudo apt install -yq bison
+
+          wget 'https://github.com/gbdev/rgbds/releases/download/v0.6.1/rgbds-0.6.1.tar.gz' -O- | tar xz rgbds/{include,src,Makefile}
+          pushd rgbds
+          make -j4 rgbasm rgblink rgbfix Q=
+          popd
+
+          wget https://github.com/gbdk-2020/gbdk-2020/releases/download/4.1.1/gbdk-linux64.tar.gz -O- | tar xz
 
       - name: Check out hUGEDriver
         uses: actions/checkout@v2
         with:
           path: hUGEDriver
 
-      - name: Build rgb2sdas
+      - name: Build distribution
         shell: bash
-        working-directory: hUGEDriver/tools
-        run: | # The PATH shenanigans is because `fpc` is not on the PATH --"
-          export PATH="$PATH:/c/lazarus/fpc/3.2.0/bin/x86_64-win64"
-          fpc -B -O3 -vewz -Xs -o"${{ matrix.outname }}" rgb2sdas.pas
+        run: |
+          export PATH=$PATH:`realpath gbdk/bin`
+          export PATH=$PATH:`realpath rgbds`
+
+          pushd hUGEDriver
+          rgbasm -DGBDK -ohUGEDriver.obj hUGEDriver.asm
+          python ./tools/rgb2sdas.py -o hUGEDriver.o hUGEDriver.obj
+          sdar -ru hUGEDriver.lib hUGEDriver.o
+          popd
+
+          mkdir packaging
+          mkdir packaging/rgbds
+          mkdir packaging/gbdk
+
+          cp hUGEDriver/hUGEDriver.asm packaging/rgbds/
+          cp -R hUGEDriver/include/ packaging/
+          cp hUGEDriver/hUGEDriver.lib packaging/gbdk/
 
       - name: Store build
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.name }} build
-          path: hUGEDriver/tools/${{ matrix.outname }}
+          name: Build
+          path: packaging/

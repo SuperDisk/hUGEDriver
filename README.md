@@ -46,7 +46,7 @@ NR51_REG = 0xFF;
 NR50_REG = 0x77;
 ```
 
-See `gbdk_example/gbdk_player_example.c` for a working example!
+See `gbdk_example/src/gbdk_player_example.c` for a working example!
 
 Note: hUGEDriver is assembled by RGBDS into a `.obj` file, and then is converted to GBDK's format using `rgb2sdas` (in the `gbdk_example` folder). Be sure to assemble and link this object with your game (check `gbdk_example/build.bat` for the steps).
 
@@ -82,23 +82,6 @@ Check out `player.asm` for a full fledged example of how to use the driver in an
 
 **Caution**:
 As an optimization, hUGEDriver avoids loading the same wave present in wave RAM; when "muting" CH3 and loading your own wave, make sure to set `hUGE_current_wave` to `hUGE_NO_WAVE` (a dummy value) to force a refresh.
-
-### Routines
-
-TODO
-
-## Files in this repo
-
-| File                      | Explanation                                                                                                         |
-|---------------------------|---------------------------------------------------------------------------------------------------------------------|
-| hUGEDriver.asm            | The driver itself.                                                                                                  |
-| song.asm                  | A template used to create a song descriptor for use by the driver.                                                  |
-| player.asm                | Some example code that illustrates how to initialize and use the driver. Also used by hUGETracker to preview music. |
-| gbs.asm                   | Used by hUGETracker to build GBS soundtrack files.                                                                  |
-| gbdk_example/hUGEDriver.h | A C header that allows for usage of hUGEDriver in GBDK projects.                                                    |
-| include/constants.inc     | Some note constant values. These values are mapped to actual frequency/periods in music.inc                         |
-| include/music.inc         | A table that maps the note constants (byte size) to periods that can be fed into the hardware registers (word size) |
-| doc/driver-format.txt     | A text file explaining the layout of parts of the driver, and what formats are expected by certain routines.        |
 
 ## License
 
