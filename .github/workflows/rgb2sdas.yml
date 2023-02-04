@@ -14,7 +14,7 @@ jobs:
           sudo apt -qq update
           sudo apt install -yq bison
 
-          wget 'https://github.com/gbdev/rgbds/releases/download/v0.6.1/rgbds-0.6.1.tar.gz' -O- | tar xv rgbds/{include,src,Makefile}
+          wget 'https://github.com/gbdev/rgbds/releases/download/v0.6.1/rgbds-0.6.1.tar.gz' -O- | tar xz rgbds/{include,src,Makefile}
           pushd rgbds
           make -j4 rgbasm rgblink rgbfix Q=
           popd
