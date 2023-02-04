@@ -115,16 +115,16 @@ _paint_tile:
     ret
 
 _init:
-    ld a, 0
-    ld [rIF], a
+    xor a
+    ldh [rIF], a
     inc a
-    ld [rIE], a
+    ldh [rIE], a
     halt
     nop
 
     ; Set LCD palette for grayscale mode; yes, it has a palette
     ld a, %11100100
-    ld [$FF00+$47], a
+    ldh [$FF47], a
 
     ;; Fill with pattern
     ld hl, $8000
@@ -147,13 +147,13 @@ _init:
 
     ; Enable sound globally
     ld a, $80
-    ld [rAUDENA], a
+    ldh [rAUDENA], a
     ; Enable all channels in stereo
     ld a, $FF
-    ld [rAUDTERM], a
+    ldh [rAUDTERM], a
     ; Set volume
     ld a, $77
-    ld [rAUDVOL], a
+    ldh [rAUDVOL], a
 
     ld hl, SONG_DESCRIPTOR
     call hUGE_init
@@ -165,18 +165,18 @@ IF DEF(USE_TIMER)
     ldh [rTAC], a
 
     ld a, IEF_TIMER
-    ld [rIE], a
+    ldh [rIE], a
     ei
 ELSE
     ;; Enable the HBlank interrupt on scanline 0
-    ld a, [rSTAT]
+    ldh a, [rSTAT]
     or a, STATF_LYC
-    ld [rSTAT], a
+    ldh [rSTAT], a
     xor a ; ld a, 0
-    ld [rLYC], a
+    ldh [rLYC], a
 
     ld a, IEF_LCDC
-    ld [rIE], a
+    ldh [rIE], a
     ei
 ENDC
 
