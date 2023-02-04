@@ -44,7 +44,7 @@ jobs:
 
           cp hUGEDriver/hUGEDriver.asm packaging/rgbds/
           cp -R hUGEDriver/include/ packaging/
-          cp hUGEDriver/hUGEDriver.asm packaging/gbdk/
+          cp hUGEDriver/hUGEDriver.lib packaging/gbdk/
 
       - name: Store build
         uses: actions/upload-artifact@v2
