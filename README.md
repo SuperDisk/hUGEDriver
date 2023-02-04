@@ -48,8 +48,6 @@ NR50_REG = 0x77;
 
 See `gbdk_example/src/gbdk_player_example.c` for a working example!
 
-Note: hUGEDriver is assembled by RGBDS into a `.obj` file, and then is converted to GBDK's format using `rgb2sdas` (in the `gbdk_example` folder). Be sure to assemble and link this object with your game (check `gbdk_example/build.bat` for the steps).
-
 ## Usage
 
 This driver is suitable for use in homebrew games. hUGETracker exports data representing the various components of a song, as well as a *song descriptor* which is a small block of pointers that tell the driver how to initialize and play a song.
