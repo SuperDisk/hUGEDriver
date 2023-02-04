@@ -34,7 +34,7 @@ jobs:
 
           pushd hUGEDriver
           rgbasm -DGBDK -ohUGEDriver.obj hUGEDriver.asm
-          python .\tools\rgb2sdas.py -o hUGEDriver.o hUGEDriver.obj
+          python ./tools/rgb2sdas.py -o hUGEDriver.o hUGEDriver.obj
           sdar -ru hUGEDriver.lib hUGEDriver.o
           popd hUGEDriver
 
