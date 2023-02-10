@@ -723,6 +723,9 @@ fx_call_routine:
     ld h, [hl]
     ld l, a
 
+    ld d, b
+    ld e, c ; SDCC compatibility
+
     ld a, [tick]
     or a ; set zero flag if tick 0 for compatibility
     jp hl
