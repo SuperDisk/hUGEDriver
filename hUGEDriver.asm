@@ -521,6 +521,12 @@ play_ch3_note:
     ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
     ;; This way, CH3 will be paused when we trigger it by writing to NR34.
     ;; TODO: what if `highmask3` bit 7 is not set, though?
+    
+    ldh a, [rAUDTERM]
+    push af
+    and %10111011
+    ldh [rAUDTERM], a
+
     xor a
     ldh [rAUD3ENA], a
     cpl
@@ -535,6 +541,10 @@ play_ch3_note:
     ld a, [highmask3]
     or [hl]
     ldh [rAUD3HIGH], a
+
+    pop af
+    ldh [rAUDTERM], a
+    
     ret
 
 play_ch4_note:
@@ -806,6 +816,11 @@ update_ch3_waveform:
     sub l
     ld h, a
 
+    ldh a, [rAUDTERM]
+    push af
+    and %10111011
+    ldh [rAUDTERM], a
+
     xor a
     ldh [rAUD3ENA], a
 
@@ -816,6 +831,9 @@ ENDR
 
     ld a, %10000000
     ldh [rAUD3ENA], a
+
+    pop af
+    ldh [rAUDTERM], a
 
     ret
 
@@ -1380,7 +1398,6 @@ setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
-_hUGE_dosound_banked::
 _hUGE_dosound::
 ;;; Ticks the sound engine once.
 ;;; Destroy: AF BC DE HL
