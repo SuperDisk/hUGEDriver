@@ -894,6 +894,7 @@ fx_note_cut:
 
     ;; check channel mute
 
+    ld a, b
     ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
     ;; Overall, these two instructions add 1 to the number.
     ;; However, the first instruction will generate a carry for inputs of $02 and $03;
@@ -912,8 +913,9 @@ fx_note_cut:
     rra
     ld d, a
     ld a, [mute_channels]
+    cpl 
     and d
-    ret nz
+    ret z
 
     ;; fallthrough
 
