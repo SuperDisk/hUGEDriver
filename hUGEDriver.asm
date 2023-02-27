@@ -787,7 +787,7 @@ fx_set_duty:
     ldh [rAUD2LEN], a
     ret
 .chan4:
-    retMute 4
+    retMute 3
     ldh a, [rAUD4POLY]
     res 3, a
     or c
