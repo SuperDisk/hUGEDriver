@@ -521,6 +521,12 @@ play_ch3_note:
     ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
     ;; This way, CH3 will be paused when we trigger it by writing to NR34.
     ;; TODO: what if `highmask3` bit 7 is not set, though?
+    
+    ldh a, [rAUDTERM]
+    push af
+    and %10111011
+    ldh [rAUDTERM], a
+
     xor a
     ldh [rAUD3ENA], a
     cpl
@@ -535,6 +541,10 @@ play_ch3_note:
     ld a, [highmask3]
     or [hl]
     ldh [rAUD3HIGH], a
+
+    pop af
+    ldh [rAUDTERM], a
+    
     ret
 
 play_ch4_note:
@@ -777,7 +787,7 @@ fx_set_duty:
     ldh [rAUD2LEN], a
     ret
 .chan4:
-    retMute 4
+    retMute 3
     ldh a, [rAUD4POLY]
     res 3, a
     or c
@@ -806,6 +816,11 @@ update_ch3_waveform:
     sub l
     ld h, a
 
+    ldh a, [rAUDTERM]
+    push af
+    and %10111011
+    ldh [rAUDTERM], a
+
     xor a
     ldh [rAUD3ENA], a
 
@@ -816,6 +831,9 @@ ENDR
 
     ld a, %10000000
     ldh [rAUD3ENA], a
+
+    pop af
+    ldh [rAUDTERM], a
 
     ret
 
@@ -876,6 +894,7 @@ fx_note_cut:
 
     ;; check channel mute
 
+    ld a, b
     ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
     ;; Overall, these two instructions add 1 to the number.
     ;; However, the first instruction will generate a carry for inputs of $02 and $03;
@@ -894,8 +913,9 @@ fx_note_cut:
     rra
     ld d, a
     ld a, [mute_channels]
+    cpl 
     and d
-    ret nz
+    ret z
 
     ;; fallthrough
 
@@ -1262,6 +1282,7 @@ fx_vol_slide:
 
     ;; check channel mute
 
+    ld a, b
     ;; 0 → $01, 1 → $02, 2 → $04, 3 → $05
     ;; Overall, these two instructions add 1 to the number.
     ;; However, the first instruction will generate a carry for inputs of $02 and $03;
@@ -1280,8 +1301,9 @@ fx_vol_slide:
     rra
     ld d, a
     ld a, [mute_channels]
+    cpl
     and d
-    ret nz
+    ret z
 
     ;; setup the up and down params
     ld a, c
@@ -1380,7 +1402,6 @@ setup_instrument_pointer:
     rla ; reset the Z flag
     ret
 
-_hUGE_dosound_banked::
 _hUGE_dosound::
 ;;; Ticks the sound engine once.
 ;;; Destroy: AF BC DE HL
