@@ -9,8 +9,8 @@ dw $70+$400 ; load address
 dw gbs_init ; init address
 dw _hUGE_dosound ; play address
 dw $fffe ; stack pointer
-db 0
-db 0
+db TIMER_MODULO ; timer modulo
+db TIMER_CONTROL ; timer control
 db "{GBS_TITLE}"
 db "{GBS_AUTHOR}"
 db "{GBS_COPYRIGHT}"
