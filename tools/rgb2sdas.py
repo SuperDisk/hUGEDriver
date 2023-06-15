@@ -99,13 +99,13 @@ class RGBObject(object):
                 tag = tag[0]
             itm = {'Tag': tag}
             if tag == rpnBankSymbol:
-                itm['BankSymbol'] = stream.read_null_term(data)
+                itm['BankSymbol'] = stream.read_record('<i')
             elif tag == rpnBankSection:
-                itm['BankSection'] = stream.read_null_term(data)
+                itm['BankSection'] = stream.read_null_term()
             elif tag == rpnSizeOfSection:
-                itm['SizeOfSection'] = stream.read_null_term(data)
+                itm['SizeOfSection'] = stream.read_null_term()
             elif tag == rpnStartOfSection:
-                itm['StartOfSection'] = stream.read_null_term(data)
+                itm['StartOfSection'] = stream.read_null_term()
             elif tag == rpnInteger:
                 itm['IntValue'], = stream.read_record('<i')
             elif tag == rpnSymbol:
