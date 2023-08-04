@@ -521,7 +521,7 @@ play_ch3_note:
     ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
     ;; This way, CH3 will be paused when we trigger it by writing to NR34.
     ;; TODO: what if `highmask3` bit 7 is not set, though?
-    
+
     ldh a, [rAUDTERM]
     push af
     and %10111011
@@ -544,7 +544,7 @@ play_ch3_note:
 
     pop af
     ldh [rAUDTERM], a
-    
+
     ret
 
 play_ch4_note:
@@ -852,6 +852,7 @@ fx_set_speed:
 IF DEF(GBDK)
 _hUGE_set_position::
     ld c, a
+    xor a
 ENDC
 
 hUGE_set_position::
@@ -913,7 +914,7 @@ fx_note_cut:
     rra
     ld d, a
     ld a, [mute_channels]
-    cpl 
+    cpl
     and d
     ret z
 
