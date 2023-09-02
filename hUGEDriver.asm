@@ -60,7 +60,7 @@ pattern3: dw
 pattern4: dw
 
 ;; How long a row lasts in ticks (1 = one row per call to `hUGE_dosound`, etc. 0 translates to 256)
-ticks_per_row: db
+ticks_per_row: ds 4
 
 _hUGE_current_wave::
 hUGE_current_wave::
@@ -161,14 +161,15 @@ ENDC
 ;;; Param: HL = Pointer to the "song descriptor" you wish to load (typically exported by hUGETracker).
 ;;; Destroys: AF C DE HL
 hUGE_init::
+    ld de, ticks_per_row
+
+REPT 4
     ld a, [hl+] ; tempo
-    ld [ticks_per_row], a
+    ld [de], a
+    inc de
+ENDR
 
     ld a, [hl+]
-    ld e, a
-    ld a, [hl+]
-    ld d, a
-    ld a, [de]
     ld [order_cnt], a
 
     ld c, _end_song_descriptor_pointers - (_start_song_descriptor_pointers)
@@ -1807,6 +1808,13 @@ tick_time:
 IF DEF(PREVIEW_MODE)
     db $f4 ; signal tick to tracker
 ENDC
+
+    ld a, [row]
+    and 3
+    ld hl, ticks_per_row
+    add_a_to_r16 hl
+    ld b, [hl]
+
     ld hl, counter
     inc [hl]
 
@@ -1815,7 +1823,7 @@ ENDC
     inc [hl] ; Increment tick counter
 
     ;; Should we switch to the next row?
-    ld a, [ticks_per_row]
+    ld a, b
     sub [hl]
     ret nz ; Nope.
     ld [hl+], a ; Reset tick to 0
