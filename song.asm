@@ -5,8 +5,8 @@ SECTION "Song Data", ROMX
 ;; song descriptor
 
 SONG_DESCRIPTOR::
-db TICKS  ; tempo
-dw order_cnt
+db TICKS0, TICKS1, TICKS2, TICKS3
+db ORDER_COUNT
 dw order1, order2, order3, order4
 dw duty_instruments, wave_instruments, noise_instruments
 dw routines
