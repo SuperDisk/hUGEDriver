@@ -4,6 +4,7 @@ SECTION "Song Data", ROMX
 
 ;; song descriptor
 
+song_descriptor:
 SONG_DESCRIPTOR::
 db TICKS0, TICKS1, TICKS2, TICKS3
 db ORDER_COUNT
