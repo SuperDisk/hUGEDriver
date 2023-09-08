@@ -108,8 +108,8 @@ typedef struct hUGENoiseInstr_t {
 } hUGENoiseInstr_t;
 
 typedef struct hUGESong_t {
-  unsigned char tempo;
-  const unsigned char * order_cnt;
+  const unsigned char tempo1, tempo2, tempo3, tempo4;
+  const unsigned char order_cnt;
   const unsigned char ** order1, ** order2, ** order3, ** order4;
   const hUGEDutyInstr_t * duty_instruments;
   const hUGEWaveInstr_t * wave_instruments;
@@ -136,7 +136,7 @@ extern volatile unsigned char hUGE_current_wave;
 extern volatile unsigned char hUGE_mute_mask;
 
 inline void hUGE_reset_wave(void) {
-	hUGE_current_wave = 100;
+  hUGE_current_wave = 100;
 }
 
 #endif
