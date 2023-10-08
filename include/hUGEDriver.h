@@ -132,11 +132,11 @@ void hUGE_mute_channel(enum hUGE_channel_t ch, enum hUGE_mute_t mute);
 void hUGE_set_position(unsigned char pattern);
 
 extern volatile unsigned char hUGE_current_wave;
-
+extern volatile unsigned char hUGE_current_order;
 extern volatile unsigned char hUGE_mute_mask;
 
 inline void hUGE_reset_wave(void) {
-	hUGE_current_wave = 100;
+  hUGE_current_wave = 100;
 }
 
 #endif
