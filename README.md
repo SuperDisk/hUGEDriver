@@ -1,4 +1,4 @@
-![hUGEDriver](https://nickfa.ro/images/Hugedriver2.gif)
+![hUGEDriver](https://github.com/SuperDisk/hUGEDriver/assets/1688837/a6079751-20b5-4db3-bb48-0e748234f8ca)
 ===
 
 This is the repository for hUGEDriver, the music driver for the Game Boy which plays music created in [hUGETracker](https://github.com/SuperDisk/hUGETracker).
