@@ -80,7 +80,7 @@ tick: db
 row_break: db
 next_order: db
 row: db
-hUGE_current_order::
+_hUGE_current_order::
 current_order: db
 
 IF DEF(PREVIEW_MODE)
