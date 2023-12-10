@@ -84,6 +84,8 @@ current_order: db
 
 IF DEF(PREVIEW_MODE)
 loop_order: db
+single_stepping: db
+single_step_stopped: db
 ENDC
 
 channels:
@@ -1407,6 +1409,13 @@ _hUGE_dosound::
 ;;; Ticks the sound engine once.
 ;;; Destroy: AF BC DE HL
 hUGE_dosound::
+IF DEF(PREVIEW_MODE)
+   ld a, [single_stepping]
+   ld hl, single_step_stopped
+   and [hl]
+   ret nz
+ENDC
+
     ld a, [tick]
     or a
     jp nz, process_effects
@@ -1796,7 +1805,7 @@ process_effects:
 
 tick_time:
 IF DEF(PREVIEW_MODE)
-    db $f4
+    db $f4 ; signal tick to tracker
 ENDC
     ld hl, counter
     inc [hl]
@@ -1873,6 +1882,13 @@ ENDC
 
 IF DEF(PREVIEW_MODE)
     db $fd ; signal row update to tracker
+
+    ld a, [single_stepping]
+    or a
+    ret z
+
+    ; a is nonzero
+    ld [single_step_stopped], a
 ENDC
     ret
 
