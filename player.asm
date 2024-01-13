@@ -1,7 +1,7 @@
 include "include/hardware.inc"
 
 ; Constants
-STACK_SIZE EQU $7A
+DEF STACK_SIZE EQU $7A
 ;; Stack starts at $FFFE
 
 ; $0000 - $003F: RST handlers.
