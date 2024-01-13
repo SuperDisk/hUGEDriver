@@ -31,7 +31,7 @@ MACRO checkMute
 ENDM
 
 ;; Maximum pattern length
-PATTERN_LENGTH EQU 64
+DEF PATTERN_LENGTH EQU 64
 
 SECTION "Playback variables", WRAM0
 ;; Active song descriptor
@@ -66,7 +66,7 @@ _hUGE_current_wave::
 hUGE_current_wave::
 ;; ID of the wave currently loaded into wave RAM
 current_wave: db
-hUGE_NO_WAVE equ 100
+def hUGE_NO_WAVE equ 100
     EXPORT hUGE_NO_WAVE
 
 ;; Everything between this and `end_zero` is zero-initialized by `hUGE_init`
