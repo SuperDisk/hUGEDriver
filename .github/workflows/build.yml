@@ -3,6 +3,7 @@ name: Package driver distribution
 on:
   - push
   - pull_request
+  - workflow_dispatch
 
 jobs:
   build:
