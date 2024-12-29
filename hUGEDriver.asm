@@ -1695,7 +1695,7 @@ process_ch4:
     call nz, do_table
 
     ;; finally just update the tick/order/row values
-    jp tick_time
+    jp hUGE_tick_time
 
 process_effects:
     ;; Only do effects if not on tick zero
@@ -1803,7 +1803,8 @@ process_effects:
     ld e, 3
     call nz, do_table
 
-tick_time:
+_hUGE_tick_time::
+hUGE_tick_time:
 IF DEF(PREVIEW_MODE)
     db $f4 ; signal tick to tracker
 ENDC

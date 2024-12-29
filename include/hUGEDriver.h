@@ -123,6 +123,7 @@ void hUGE_init(const hUGESong_t * song);
 
 // driver routine
 void hUGE_dosound(void);
+void hUGE_tick_time(void);
 
 enum hUGE_channel_t {HT_CH1 = 0, HT_CH2, HT_CH3, HT_CH4};
 enum hUGE_mute_t    {HT_CH_PLAY = 0, HT_CH_MUTE};
@@ -136,7 +137,7 @@ extern volatile unsigned char hUGE_current_wave;
 extern volatile unsigned char hUGE_mute_mask;
 
 inline void hUGE_reset_wave(void) {
-	hUGE_current_wave = 100;
+  hUGE_current_wave = 100;
 }
 
 #endif
