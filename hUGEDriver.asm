@@ -808,16 +808,20 @@ fx_set_duty:
 
 update_ch3_waveform:
     ld [hl], a
-    ;; Get pointer to new wave
-    swap a
+    ld l, a
+    ld h, 0
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ld b, h
+    ld c, l
+
     ld hl, waves
-    add [hl]
-    inc hl
+    ld a, [hl+]
     ld h, [hl]
     ld l, a
-    adc h
-    sub l
-    ld h, a
+    add hl, bc
 
     ldh a, [rAUDTERM]
     push af
@@ -1588,7 +1592,9 @@ process_ch3:
     ld hl, current_wave
     cp [hl]
     jr z, .no_wave_copy
+    push bc
     call update_ch3_waveform
+    pop bc
 
 .no_wave_copy:
     pop hl
