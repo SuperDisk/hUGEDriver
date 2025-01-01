@@ -1817,8 +1817,11 @@ ENDC
 
     ld a, [row]
     and 3
-    ld hl, ticks_per_row
-    add_a_to_r16 hl
+    add LOW(ticks_per_row)
+    ld l, a
+    adc HIGH(ticks_per_row)
+    sub l
+    ld h, a
     ld b, [hl]
 
     ld hl, counter
