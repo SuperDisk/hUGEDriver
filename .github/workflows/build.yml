@@ -23,7 +23,7 @@ jobs:
           wget https://github.com/gbdk-2020/gbdk-2020/releases/download/4.1.1/gbdk-linux64.tar.gz -O- | tar xz
 
       - name: Check out hUGEDriver
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: hUGEDriver
 
@@ -50,7 +50,7 @@ jobs:
           rm packaging/include/hardware.inc
 
       - name: Store build
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: hUGEDriver
           path: packaging/
