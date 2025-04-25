@@ -2,7 +2,7 @@
 rgbasm -ohUGEDriver.obj -i.. ../hUGEDriver.asm
 
 # Assemble the song into an object
-rgbasm -osample_song.obj -i.. sample_song.asm
+rgbasm -osample_song.obj -i../include sample_song.asm
 
 # Assemble the example player code into an object
 rgbasm -H -oplayer.obj -i.. -DSONG_DESCRIPTOR=sample_song ../player.asm
