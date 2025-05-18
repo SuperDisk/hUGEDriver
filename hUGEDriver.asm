@@ -101,7 +101,9 @@ vibrato_tremolo_phase1: db
 envelope1: db
 table1: dw
 table_row1: db
-ds 5
+arp_counter1: db
+arp_mode1: db
+ds 3
 
 ;;;;;;;;;;;
 ;;Channel 2
@@ -115,7 +117,9 @@ vibrato_tremolo_phase2: db
 envelope2: db
 table2: dw
 table_row2: db
-ds 5
+arp_counter2: db
+arp_mode2: db
+ds 3
 
 ;;;;;;;;;;;
 ;;Channel 3
@@ -129,7 +133,9 @@ vibrato_tremolo_phase3: db
 envelope3: db
 table3: dw
 table_row3: db
-ds 5
+arp_counter3: db
+arp_mode3: db
+ds 3
 
 ;;;;;;;;;;;
 ;;Channel 4
@@ -144,7 +150,9 @@ vibrato_tremolo_phase4: db
 envelope4: db
 table4: dw
 table_row4: db
-ds 4
+arp_counter4: db
+arp_mode4: db
+ds 2
 
 end_zero:
 
@@ -687,7 +695,7 @@ do_effect:
     dw fx_toneporta                    ;3xy
     dw fx_vibrato                      ;4xy
     dw fx_set_master_volume            ;5xy ; global
-    dw fx_call_routine                 ;6xy
+    dw fx_extra                        ;6xy
     dw fx_note_delay                   ;7xy
     dw fx_set_pan                      ;8xy ; global
     dw fx_set_duty                     ;9xy
@@ -711,37 +719,16 @@ fx_set_master_volume:
     ret
 
 
-;;; Processes effect 6, "call routine".
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Routine ID
+;;; Param: C = arg
 ;;; Param: A = Current tick
 ;;; Param: ZF = Set if and only if on tick 0
 ;;; Destroy: Anything the routine does
-fx_call_routine:
-    nop ; In place of `ret cc`. Allows to be used in subpatterns
-
-    ld hl, routines
-    ld a, $0f
-    and c
-    add a
-    add [hl]
-    ld e, a
-    inc hl
-    ld a, $0
-    adc [hl]
-    ld h, a
-    ld l, e
-
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-
-    ld d, b
-    ld e, c ; SDCC compatibility
-
-    ld a, [tick]
-    or a ; set zero flag if tick 0 for compatibility
-    jp hl
+fx_extra:
+    ld d, 12
+    call ptr_to_channel_member
+    ld [hl], c
+    ret
 
 
 ;;; Processes (global) effect 8, "set pan".
@@ -1066,25 +1053,31 @@ fx_vibrato:
 fx_arpeggio:
     nop ; In place of `ret cc`. Allows to be used in subpatterns
 
+    ld a, [counter]
+    ld e, a
+
     ld d, 4
     call ptr_to_channel_member
     ld d, [hl]
 
-    ld a, [counter]
-    dec a
+    ld a, 8
+    add_a_to_r16 hl
+    ld a, [hl+]
+    or a
 
-    ;; TODO: A crappy modulo, because it's not a multiple of four :(
-
-    jr .test_greater_than_two
-.greater_than_two:
-    sub 3
-.test_greater_than_two:
-    cp 3
-    jr nc, .greater_than_two
+    ld a, 1
+    jr z, .no_slowmode
+    and e
+.no_slowmode:
+    add [hl]
+    cp %11
+    jr nz, .no_wrap
+    xor a
+.no_wrap
+    ld [hl], a
 
     ;; Multiply by 2 to get offset into table
     add a
-
     add LOW(.arp_options)
     ld l, a
     adc HIGH(.arp_options)
