@@ -695,14 +695,14 @@ do_effect:
     dw fx_toneporta                    ;3xy
     dw fx_vibrato                      ;4xy
     dw fx_set_master_volume            ;5xy ; global
-    dw fx_extra                        ;6xy
+    dw fx_call_routine                 ;6xy
     dw fx_note_delay                   ;7xy
     dw fx_set_pan                      ;8xy ; global
     dw fx_set_duty                     ;9xy
     dw fx_vol_slide                    ;Axy
     dw fx_pos_jump                     ;Bxy ; global
     dw fx_set_volume                   ;Cxy
-    dw fx_pattern_break                ;Dxy ; global
+    dw fx_extra                        ;Dxy ; global
     dw fx_note_cut                     ;Exy
     dw fx_set_speed                    ;Fxy ; global
 
@@ -718,6 +718,37 @@ fx_set_master_volume:
     ldh [rAUDVOL], a
     ret
 
+;;; Processes effect 6, "call routine".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Routine ID
+;;; Param: A = Current tick
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: Anything the routine does
+fx_call_routine:
+    nop ; In place of `ret cc`. Allows to be used in subpatterns
+
+    ld hl, routines
+    ld a, $0f
+    and c
+    add a
+    add [hl]
+    ld e, a
+    inc hl
+    ld a, $0
+    adc [hl]
+    ld h, a
+    ld l, e
+
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ld d, b
+    ld e, c ; SDCC compatibility
+
+    ld a, [tick]
+    or a ; set zero flag if tick 0 for compatibility
+    jp hl
 
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
 ;;; Param: C = arg
@@ -860,17 +891,6 @@ fx_pos_jump:
 .already_broken:
     inc hl
     ld [hl], c
-    ret
-
-
-;;; Processes (global) effect D, "pattern break".
-;;; Param: C = ID of the next order's row to start on
-;;; Destroy: A
-fx_pattern_break:
-    ret nz
-
-    ld a, c
-    ld [row_break], a
     ret
 
 
