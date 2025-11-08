@@ -35,7 +35,7 @@ DEF PATTERN_LENGTH EQU 64
 
 SECTION "Playback variables", WRAM0
 ;; Active song descriptor
-order_cnt: db
+order_cnt: dw
 _start_song_descriptor_pointers:
 ;; Pointers to the song's current four orders (one per channel)
 order1: dw
@@ -80,7 +80,7 @@ tick: db
 row_break: db
 next_order: db
 row: db
-current_order: db
+current_order: dw
 
 IF DEF(PREVIEW_MODE)
 loop_order: db
@@ -179,6 +179,8 @@ ENDR
 
     ld a, [hl+]
     ld [order_cnt], a
+    ld a, [hl+]
+    ld [order_cnt+1], a
 
     ld c, _end_song_descriptor_pointers - (_start_song_descriptor_pointers)
     ld de, order1
@@ -212,9 +214,11 @@ ENDC
 
 ;; Preview mode needs to load the order ID from memory
 IF !DEF(PREVIEW_MODE)
-    ld c, 0
+    ld bc, 0
 ELSE
-    ld a, [current_order]
+    ld hl, current_order
+    ld a, [hl+]
+    ld b, [hl]
     ld c, a
 ENDC
     ;; fallthrough (load the pattern pointers)
@@ -242,12 +246,9 @@ ENDC
 
 .load_pattern:
     ld a, [hl+]
-    add c
     ld h, [hl]
     ld l, a
-    adc h
-    sub l
-    ld h, a
+    add hl, bc
 
     ld a, [hl+]
     ld [de], a
@@ -1862,6 +1863,7 @@ ENDC
     dec a
     add a ; multiply order by 2 (they are words)
 
+    push bc
     jr .update_current_order
 
 .no_break:
@@ -1881,22 +1883,37 @@ IF DEF(PREVIEW_MODE)
     jr .noreset
 .no_loop_order:
 ENDC
+    push bc
     ;; Increment order and change loaded patterns
-    ld a, [order_cnt]
+    ld hl, current_order
+    ld a, [hl+]
+    ld b, [hl]
     ld c, a
-    ld a, [current_order]
-    add 2
+
+    inc bc
+    inc bc
+
+    ld a, [order_cnt]
     cp c
     jr nz, .update_current_order
-    xor a
+
+    ld a, [order_cnt+1]
+    cp b
+    jr nz, .update_current_order
+
+    ld bc, 0
 .update_current_order:
     ;; Call with:
     ;; A: The order to load
     ;; B: The row for the order to start on
+    ld a, c
     ld [current_order], a
-    ld c, a
+    ld a, b
+    ld [current_order+1], a
+
     call load_patterns
 
+    pop bc
     ld a, b
 .noreset:
     ld [row], a
