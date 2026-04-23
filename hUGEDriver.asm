@@ -848,7 +848,11 @@ fx_set_speed:
     ret nz
 
     ld a, c
-    ld [ticks_per_row], a
+    ld hl, ticks_per_row
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl], c
     ret
 
 
