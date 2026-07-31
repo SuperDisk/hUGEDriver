@@ -422,13 +422,13 @@ update_channel_freq:
 .nonzero_highmask:
     ld c, b
     ld a, [mute_channels]
+
     dec c
     jr z, .update_channel2
     dec c
     jr z, .update_channel3
     dec c
     jr z, .update_channel4
-
 .update_channel1:
     retMute 0
 
@@ -440,7 +440,6 @@ update_channel_freq:
     or h
     ldh [rAUD1HIGH], a
     ret
-
 .update_channel2:
     retMute 1
 
@@ -480,12 +479,32 @@ update_channel_freq:
     ret
 
 
-play_note_routines:
-    jr play_ch1_note
-    jr play_ch2_note
-    jr play_ch3_note
-    jr play_ch4_note
+;;; Processes effect 7, "note delay".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Amount of ticks by which to delay the note
+;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF D HL
+fx_note_delay:
+    jr z, ret_dont_play_note
 
+    cp c
+    ret nz ; wait until the correct tick to play the note
+
+    ;; fallthrough
+
+
+;;; Plays a channel's current note.
+;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
+;;; Destroy: AF HL
+play_note:
+    ; this is faster than a jump table
+    ld a, b
+    rra
+    jr c, ch2_or_ch4
+ch1_or_ch3:
+    rra
+    jr c, play_ch3_note
 play_ch1_note:
     ld a, [mute_channels]
     retMute 0
@@ -500,7 +519,9 @@ play_ch1_note:
     or [hl]
     ldh [rAUD1HIGH], a
     ret
-
+ch2_or_ch4:
+    rra
+    jr c, play_ch4_note
 play_ch2_note:
     ld a, [mute_channels]
     retMute 1
@@ -515,7 +536,9 @@ play_ch2_note:
     or [hl]
     ldh [rAUD2HIGH], a
     ret
-
+ch3_or_ch4:
+    rra
+    jr c, play_ch4_note
 play_ch3_note:
     ld a, [mute_channels]
     retMute 2
@@ -804,7 +827,7 @@ fx_set_duty:
     call update_ch3_waveform
 
     ld b, 2
-    jp play_note
+    jp jr
 
 update_ch3_waveform:
     ld [hl], a
@@ -1078,29 +1101,14 @@ fx_arpeggio:
     dec a
 
     ;; TODO: A crappy modulo, because it's not a multiple of four :(
-
-    jr .test_greater_than_two
-.greater_than_two:
+.mod3_loop:
     sub 3
-.test_greater_than_two:
-    cp 3
-    jr nc, .greater_than_two
+    jr nc, .mod3_loop
+    add 3
 
-    ;; Multiply by 2 to get offset into table
-    add a
-
-    add LOW(.arp_options)
-    ld l, a
-    adc HIGH(.arp_options)
-    sub l
-    ld h, a
-    jp hl
-
-.arp_options:
-    jr .set_arp1
-    jr .set_arp2
-    ;; No `jr .reset_arp`
-
+    jr z, .set_arp1
+    dec a
+    jr z, .set_arp2
 .reset_arp:
     ld a, d
     jr .finish_skip_add
@@ -1265,7 +1273,7 @@ fx_toneporta:
     ld a, l
     ld [de], a
 
-ret_dont_play_note:
+ret_dont_jr:
     ;; Don't call play_chX_note. This is done by popping the saved AF register and clearing
     ;; the C flag, which relies on the way the caller is implemented!!
     pop hl
@@ -1353,37 +1361,11 @@ fx_vol_slide:
     or %10000000
     ldh [c], a
 
-    jr play_note
+    jp jr
 
 
-;;; Processes effect 7, "note delay".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Amount of ticks by which to delay the note
-;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF D HL
-fx_note_delay:
-    jr z, ret_dont_play_note
 
-    cp c
-    ret nz ; wait until the correct tick to play the note
-
-    ;; fallthrough
-
-
-;;; Plays a channel's current note.
-;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
-;;; Destroy: AF D HL
-play_note:
-    ld a, b
-    add a
-    add LOW(play_note_routines)
-    ld l, a
-    adc HIGH(play_note_routines)
-    sub l
-    ld h, a
-    jp hl
-
+;;; Effect 7 defition has been moved to just before play_note in order to allow for fallthrough
 
 ;;; Computes the pointer to an instrument.
 ;;; Param: B = The instrument's ID
