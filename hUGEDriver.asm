@@ -827,7 +827,7 @@ fx_set_duty:
     call update_ch3_waveform
 
     ld b, 2
-    jp jr
+    jp play_note
 
 update_ch3_waveform:
     ld [hl], a
@@ -1361,7 +1361,7 @@ fx_vol_slide:
     or %10000000
     ldh [c], a
 
-    jp jr
+    jp play_note
 
 
 
