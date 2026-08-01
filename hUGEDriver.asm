@@ -415,20 +415,19 @@ ptr_to_channel_member:
 ;;; Param: B = Which channel to update (0 = CH1, 1 = CH2, etc.)
 ;;; Param: (for CH4) E = Note ID
 ;;; Param: (otherwise) DE = Note period
-;;; Destroy: AF C
+;;; Destroy: AF
 ;;; Destroy: (for CH4) HL
 update_channel_freq:
     ld h, 0
 .nonzero_highmask:
-    ld c, b
+    ld a, b
+    rra
+    dec a
     ld a, [mute_channels]
 
-    dec c
-    jr z, .update_channel2
-    dec c
-    jr z, .update_channel3
-    dec c
-    jr z, .update_channel4
+    jr c, .update_ch2_or_ch4
+.update_ch1_or_ch3:
+    jr z, update_ch3
 .update_channel1:
     retMute 0
 
@@ -440,6 +439,8 @@ update_channel_freq:
     or h
     ldh [rAUD1HIGH], a
     ret
+.update_ch2_or_ch4:
+    jr z, .update_channel4
 .update_channel2:
     retMute 1
 
@@ -476,115 +477,6 @@ update_channel_freq:
 
     ld a, d
     ldh [rAUD4GO], a
-    ret
-
-
-;;; Processes effect 7, "note delay".
-;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
-;;; Param: C = Amount of ticks by which to delay the note
-;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
-;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF D HL
-fx_note_delay:
-    jr z, ret_dont_play_note
-
-    cp c
-    ret nz ; wait until the correct tick to play the note
-
-    ;; fallthrough
-
-
-;;; Plays a channel's current note.
-;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
-;;; Destroy: AF HL
-play_note:
-    ; this is faster than a jump table
-    ld a, b
-    rra
-    jr c, ch2_or_ch4
-ch1_or_ch3:
-    rra
-    jr c, play_ch3_note
-play_ch1_note:
-    ld a, [mute_channels]
-    retMute 0
-
-    ;; Play a note on channel 1 (square wave)
-    ld hl, channel_period1
-    ld a, [hl+]
-    ldh [rAUD1LOW], a
-
-    ;; Get the highmask and apply it.
-    ld a, [highmask1]
-    or [hl]
-    ldh [rAUD1HIGH], a
-    ret
-ch2_or_ch4:
-    rra
-    jr c, play_ch4_note
-play_ch2_note:
-    ld a, [mute_channels]
-    retMute 1
-
-    ;; Play a note on channel 2 (square wave)
-    ld hl, channel_period2
-    ld a, [hl+]
-    ldh [rAUD2LOW], a
-
-    ;; Get the highmask and apply it.
-    ld a, [highmask2]
-    or [hl]
-    ldh [rAUD2HIGH], a
-    ret
-ch3_or_ch4:
-    rra
-    jr c, play_ch4_note
-play_ch3_note:
-    ld a, [mute_channels]
-    retMute 2
-
-    ;; Triggering CH3 while it's reading a byte corrupts wave RAM.
-    ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
-    ;; This way, CH3 will be paused when we trigger it by writing to NR34.
-    ;; TODO: what if `highmask3` bit 7 is not set, though?
-
-    ldh a, [rAUDTERM]
-    push af
-    and %10111011
-    ldh [rAUDTERM], a
-
-    xor a
-    ldh [rAUD3ENA], a
-    cpl
-    ldh [rAUD3ENA], a
-
-    ;; Play a note on channel 3 (waveform)
-    ld hl, channel_period3
-    ld a, [hl+]
-    ldh [rAUD3LOW], a
-
-    ;; Get the highmask and apply it.
-    ld a, [highmask3]
-    or [hl]
-    ldh [rAUD3HIGH], a
-
-    pop af
-    ldh [rAUDTERM], a
-
-    ret
-
-play_ch4_note:
-    ld a, [mute_channels]
-    retMute 3
-
-    ;; Play a "note" on channel 4 (noise)
-    ld a, [channel_period4]
-    ldh [rAUD4POLY], a
-
-    ;; Get the highmask and apply it.
-    ld a, [highmask4]
-    ldh [rAUD4GO], a
-
     ret
 
 ;;; Executes a row of a table.
@@ -1089,7 +981,7 @@ fx_vibrato:
 ;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
 ;;; Param: C = Offsets in semitones (each nibble)
 ;;; Param: ZF = Set if and only if on tick 0
-;;; Destroy: AF B DE HL
+;;; Destroy: AF DE HL
 fx_arpeggio:
     nop ; In place of `ret cc`. Allows to be used in subpatterns
 
@@ -1104,26 +996,17 @@ fx_arpeggio:
 .mod3_loop:
     sub 3
     jr nc, .mod3_loop
-    add 3
 
-    jr z, .set_arp1
-    dec a
-    jr z, .set_arp2
-.reset_arp:
-    ld a, d
-    jr .finish_skip_add
-
-.set_arp2:
+    inc a
+    jr z, .reset_arp
+    inc a
     ld a, c
+    jr nz, .finish_arp
     swap a
-    db $FE ; cp <imm8> gobbles next byte
-
-.set_arp1:
-    ld a, c
 .finish_arp:
     and %00001111
+.reset_arp:
     add d
-.finish_skip_add:
     call get_note_period
     ld d, h
     ld e, l
@@ -1361,11 +1244,108 @@ fx_vol_slide:
     or %10000000
     ldh [c], a
 
-    jp play_note
+    jr play_note
 
+;;; Processes effect 7, "note delay".
+;;; Param: B = Current channel ID (0 = CH1, 1 = CH2, etc.)
+;;; Param: C = Amount of ticks by which to delay the note
+;;;            Caveats: 0 never plays the note, and a delay longer than a row's duration skips the note entirely
+;;; Param: ZF = Set if and only if on tick 0
+;;; Destroy: AF D HL
+fx_note_delay:
+    jp z, ret_dont_play_note
 
+    cp c
+    ret nz ; wait until the correct tick to play the note
 
-;;; Effect 7 defition has been moved to just before play_note in order to allow for fallthrough
+    ;; fallthrough
+
+;;; Plays a channel's current note.
+;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
+;;; Destroy: AF HL
+play_note:
+    ; this is faster than a jump table
+    ld a, b
+    rra
+    dec a
+    ld a, [mute_channels]
+    jr c, play_ch2_or_ch4
+play_ch1_or_ch3:
+    jr z, play_ch3_note
+play_ch1_note:
+    retMute 0
+
+    ;; Play a note on channel 1 (square wave)
+    ld hl, channel_period1
+    ld a, [hl+]
+    ldh [rAUD1LOW], a
+
+    ;; Get the highmask and apply it.
+    ld a, [highmask1]
+    or [hl]
+    ldh [rAUD1HIGH], a
+    ret
+play_ch2_or_ch4:
+    jr z, play_ch4_note
+play_ch2_note:
+    retMute 1
+
+    ;; Play a note on channel 2 (square wave)
+    ld hl, channel_period2
+    ld a, [hl+]
+    ldh [rAUD2LOW], a
+
+    ;; Get the highmask and apply it.
+    ld a, [highmask2]
+    or [hl]
+    ldh [rAUD2HIGH], a
+    ret
+play_ch3_note:
+    retMute 2
+
+    ;; Triggering CH3 while it's reading a byte corrupts wave RAM.
+    ;; To avoid this, we kill the wave channel (0 → NR30), then re-enable it.
+    ;; This way, CH3 will be paused when we trigger it by writing to NR34.
+    ;; TODO: what if `highmask3` bit 7 is not set, though?
+
+    ldh a, [rAUDTERM]
+    push af
+    and %10111011
+    ldh [rAUDTERM], a
+
+    xor a
+    ldh [rAUD3ENA], a
+    cpl
+    ldh [rAUD3ENA], a
+
+    ;; Play a note on channel 3 (waveform)
+    ld hl, channel_period3
+    ld a, [hl+]
+    ldh [rAUD3LOW], a
+
+    ;; Get the highmask and apply it.
+    ld a, [highmask3]
+    or [hl]
+    ldh [rAUD3HIGH], a
+
+    pop af
+    ldh [rAUDTERM], a
+
+    ret
+
+play_ch4_note:
+    retMute 3
+
+    ;; Play a "note" on channel 4 (noise)
+    ld a, [channel_period4]
+    ldh [rAUD4POLY], a
+
+    ;; Get the highmask and apply it.
+    ld a, [highmask4]
+    ldh [rAUD4GO], a
+
+    ret
+
 
 ;;; Computes the pointer to an instrument.
 ;;; Param: B = The instrument's ID
