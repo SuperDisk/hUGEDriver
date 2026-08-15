@@ -354,7 +354,7 @@ get_note_period:
 ;;; Gets a note's "polynomial counter", i.e. what should be written to NR44.
 ;;; Param: A = Note ID
 ;;; Return: A = Note's poly
-;;; Destroy: F HL
+;;; Destroy: F
 get_note_poly:
     ;; Invert the order of the numbers
     add 192 ; (255 - 63)
@@ -368,28 +368,22 @@ get_note_poly:
     ;   A := (C or (B shl 4))
     ; end;
 
-    ; if A < 7 then return
-    cp 7
+    ; if A <= 7 then return
+    cp 8
     ret c
 
-    ld h, a
+    ; this sequence of instruction output the same thing as the previous formula, but this is faster and doesn't require any extra register
+    ; is was found using Kumqwhat, a bruteforcing tool that search for optimal sequence of instruction that achieve a given task.
+    rrca
+    adc a
+    rla
+    rrca
+    sbc 221
+    rla
+    rla
+    daa
 
-    ; B := (A-4) div 4;
-    srl a
-    srl a
-    dec a
-    ld l, a
-
-    ; C := (A mod 4)+4;
-    ld a, h
-    and 3 ; mod 4
-    add 4
-
-    ; A := (C or (B shl 4))
-    swap l
-    or l
     ret
-
 
 ;;; Computes the pointer to a member of a channel.
 ;;; Param: B = Which channel (0 = CH1, 1 = CH2, etc.)
