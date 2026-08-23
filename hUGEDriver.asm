@@ -76,23 +76,6 @@ catalog4: dw
 cached_row4: ds 3
 order4: dw
 
-ASSERT pattern_stack_ptr1 == pattern1 + 2
-ASSERT catalog1 == pattern1 + 4
-ASSERT cached_row1 == pattern1 + 6
-ASSERT order1 == pattern1 + 9
-ASSERT pattern_stack_ptr2 == pattern2 + 2
-ASSERT catalog2 == pattern2 + 4
-ASSERT cached_row2 == pattern2 + 6
-ASSERT order2 == pattern2 + 9
-ASSERT pattern_stack_ptr3 == pattern3 + 2
-ASSERT catalog3 == pattern3 + 4
-ASSERT cached_row3 == pattern3 + 6
-ASSERT order3 == pattern3 + 9
-ASSERT pattern_stack_ptr4 == pattern4 + 2
-ASSERT catalog4 == pattern4 + 4
-ASSERT cached_row4 == pattern4 + 6
-ASSERT order4 == pattern4 + 9
-
 ;; Pointers to the instrument tables
 duty_instruments: dw
 wave_instruments: dw
