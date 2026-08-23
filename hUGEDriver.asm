@@ -34,13 +34,36 @@ ENDM
 DEF PATTERN_LENGTH EQU 64
 
 SECTION "Playback variables", WRAM0
+
 ;; Active song descriptor
 order_cnt: db
+
 _start_song_descriptor_pointers:
-;; Pointers to the song's current four orders (one per channel)
-order1: dw
+
+;; Pointers to the song's pattern data pointers
+
+pattern1: dw ; cursor into pattern data bytecode
+pattern_stack_ptr1: dw ; the stack for bytecode calls/returns
+catalog1: dw ; the channel's note catalog
+cached_row1: ds 3
+order1: dw ; the channel's order table
+
+pattern2: dw
+pattern_stack_ptr2: dw
+catalog2: dw
+cached_row2: ds 3
 order2: dw
+
+pattern3: dw
+pattern_stack_ptr3: dw
+catalog3: dw
+cached_row3: ds 3
 order3: dw
+
+pattern4: dw
+pattern_stack_ptr4: dw
+catalog4: dw
+cached_row4: ds 3
 order4: dw
 
 ;; Pointers to the instrument tables
@@ -48,16 +71,20 @@ duty_instruments: dw
 wave_instruments: dw
 noise_instruments: dw
 
+;; The actual stacks for the pattern stacks
+pattern_stack1: ds 32
+pattern_stack2: ds 32
+pattern_stack3: ds 32
+pattern_stack4: ds 32
+
 ;; Misc. pointers
 routines: dw
 waves: dw
+
 _end_song_descriptor_pointers:
 
-;; Pointers to the current patterns (sort of a cache)
-pattern1: dw
-pattern2: dw
-pattern3: dw
-pattern4: dw
+pattern_stack_temporary: dw
+saved_stack: dw
 
 ;; How long a row lasts in ticks (1 = one row per call to `hUGE_dosound`, etc. 0 translates to 256)
 ticks_per_row: ds 4
@@ -173,7 +200,7 @@ ENDR
     ld [order_cnt], a
 
     ld c, _end_song_descriptor_pointers - (_start_song_descriptor_pointers)
-    ld de, order1
+    ld de, _start_song_descriptor_pointers
 
 .copy_song_descriptor_loop:
     ld a, [hl+]
@@ -203,9 +230,7 @@ ENDC
     ld [current_wave], a
 
 ;; Preview mode needs to load the order ID from memory
-IF !DEF(PREVIEW_MODE)
-    ld c, 0
-ELSE
+IF DEF(PREVIEW_MODE)
     ld a, [current_order]
     ld c, a
 ENDC
@@ -234,7 +259,12 @@ ENDC
 
 .load_pattern:
     ld a, [hl+]
+
+IF DEF(PREVIEW_MODE)
     add c
+ENDC
+
+    ;; HL = [HL]*2
     ld h, [hl]
     ld l, a
     adc h
@@ -283,28 +313,132 @@ hUGE_mute_channel::
 
 
 ;;; Reads a pattern's current row.
-;;; Param: BC = Pointer to the pattern
+;;; Param: HL = Pointer to the pattern data struct
 ;;; Param: [row] = Index of the current row
 ;;; Return: A = Note ID
 ;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
 ;;; Return: C = Effect parameter
 ;;; Destroy: HL
-get_current_row:
-    ld a, [row]
-.row_in_a:
-    ld h, a
-    ;; Multiply by 3 for the note value
-    add h
-    add h
+get_and_advance_current_row:
+    push de
+    ld [saved_stack], sp
+    ld sp, hl
+    ld [pattern_stack_temporary], sp
+    pop bc
+    pop hl
+    pop de
+    ld sp, hl
+    ld h, b
+    ld l, c
+    ;; HL = pattern data pointer
+    ;; SP = pattern stack
+    ;; DE = catalog pointer
 
-    ld h, 0
+.pattern_ptr_in_hl:
+    ld a, [hl+]
+
+    cp 181
+    jr c, .catalog_entry
+
+    cp 254
+    jr c, .literal
+    jr z, .phrase_call
+
+.phrase_return:
+    pop hl
+    jr .pattern_ptr_in_hl
+
+.catalog_entry:
+    push hl
+
+    ld c, a
+    ld b, 0
     ld l, a
-    add hl, bc ; HL now points at the 3rd byte of the note
+    ld h, b ; ld h, 0
+
+    add hl, hl       ; index * 2
+    add hl, bc       ; index * 3
+    add hl, de       ; += catalog pointer
+
     ld a, [hl+]
     ld b, [hl]
     inc hl
     ld c, [hl]
+
+    pop hl
+    jr .finish_decode
+
+.literal:
+    sub 181
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
+    inc hl
+    jr .finish_decode
+
+.phrase_call:
+    ld a, [hl+]
+    ld c, a
+    ld a, [hl+]
+    ld b, a
+    ;; BC = target, HL = return address
+
+    push hl
+    ld h, b
+    ld l, c
+    jr .pattern_ptr_in_hl
+
+.finish_decode:
+    push af
+    push bc
+    ld d, h
+    ld e, l
+    ;; DE = current bytecode cursor
+
+    ld hl, sp+4
+    ld a, [pattern_stack_temporary]
+    ld c, a
+    ld a, [pattern_stack_temporary+1]
+    ld b, a
+    ;; BC = pattern-data struct
+
+    ;; write pattern ptr to patternX
+    ld a, e
+    ld [bc], a
+    inc bc
+    ld a, d
+    ld [bc], a
+    inc bc
+
+    ;; write new stack position to pattern_stack_ptrX
+    ld a, l
+    ld [bc], a
+    inc bc
+    ld a, h
+    ld [bc], a
+    inc bc
+
+    ld h, b
+    ld l, c
+
+    pop bc
+    pop af
+
+    ;; write cached row
+    inc hl
+    inc hl
+    ld [hl+], a
+    ld [hl], b
+    inc hl
+    ld [hl], c
+
+    ld sp, saved_stack
+    pop hl
+    ld sp, hl
+    pop de
+
     ret
+
 
 ;;; Gets the "period" of a pattern's current note.
 ;;; Param: HL = Pointer to the pattern pointer
