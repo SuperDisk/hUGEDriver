@@ -504,45 +504,6 @@ get_and_advance_current_row:
 
     ret
 
-
-;;; Reads the row most recently decoded for a channel.
-;;; Param: HL = Pointer to the pattern data struct
-;;; Return: A = Note ID
-;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
-;;; Return: C = Effect parameter
-;;; Destroy: HL
-get_cached_row:
-    REPT 6
-        inc hl
-    ENDR
-    ld a, [hl+]
-    ld b, [hl]
-    inc hl
-    ld c, [hl]
-    ret
-
-
-;;; Reads one uncompressed three-byte instrument-subpattern row.
-;;; Param: A = Row index
-;;; Param: BC = Pointer to the subpattern
-;;; Return: A = Note ID
-;;; Return: B = Instrument/effect code
-;;; Return: C = Effect parameter
-;;; Destroy: HL
-get_subpattern_row:
-    ld h, a
-    add h
-    add h
-    ld h, 0
-    ld l, a
-    add hl, bc
-    ld a, [hl+]
-    ld b, [hl]
-    inc hl
-    ld c, [hl]
-    ret
-
-
 ;;; Gets the "period" of a pattern's current note.
 ;;; Param: HL = Pointer to the pattern data struct
 ;;; Param: DE = Location to write the note's index to, if applicable
@@ -808,7 +769,17 @@ do_table:
 
     ;; Grab the cell values, return if no note.
     ;; Save BC for doing effects.
-    call get_subpattern_row
+    ld h, a
+    add h
+    add h
+    ld h, 0
+    ld l, a
+    add hl, bc
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
+
     pop hl ; TODO: don't trash HL in the first place
     push bc
 
@@ -1936,8 +1907,11 @@ process_effects:
     ;; Only do effects if not on tick zero
     checkMute 0, .after_effect1
 
-    ld hl, pattern1
-    call get_cached_row
+    ld hl, cached_row1
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -1960,8 +1934,11 @@ process_effects:
 .process_ch2:
     checkMute 1, .after_effect2
 
-    ld hl, pattern2
-    call get_cached_row
+    ld hl, cached_row2
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -1983,8 +1960,11 @@ process_effects:
 .process_ch3:
     checkMute 2, .after_effect3
 
-    ld hl, pattern3
-    call get_cached_row
+    ld hl, cached_row3
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -2006,8 +1986,11 @@ process_effects:
 .process_ch4:
     checkMute 3, .after_effect4
 
-    ld hl, pattern4
-    call get_cached_row
+    ld hl, cached_row4
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
