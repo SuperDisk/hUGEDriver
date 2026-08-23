@@ -10,7 +10,6 @@ db TICKS0, TICKS1, TICKS2, TICKS3
 db ORDER_COUNT
 dw order1, order2, order3, order4
 dw note_catalog1, note_catalog2, note_catalog3, note_catalog4
-dw pattern_dictionary1, pattern_dictionary2, pattern_dictionary3, pattern_dictionary4
 dw duty_instruments, wave_instruments, noise_instruments
 dw routines
 dw waves

@@ -78,7 +78,7 @@
 #define As8 70
 #define B_8 71
 #define LAST_NOTE 72
-#define ___ 90
+#define ___ 72
 
 // tick is a tick number; the high byte of param is channel and the low byte of param is routine id
 typedef void (*hUGERoutine_t)(unsigned char tick, unsigned int param);
@@ -111,6 +111,8 @@ typedef struct hUGESong_t {
   const unsigned char tempo1, tempo2, tempo3, tempo4;
   const unsigned char order_cnt;
   const unsigned char ** order1, ** order2, ** order3, ** order4;
+  const unsigned char * note_catalog1, * note_catalog2;
+  const unsigned char * note_catalog3, * note_catalog4;
   const hUGEDutyInstr_t * duty_instruments;
   const hUGEWaveInstr_t * wave_instruments;
   const hUGENoiseInstr_t * noise_instruments;
@@ -121,7 +123,8 @@ typedef struct hUGESong_t {
 // initialize the driver with song data
 void hUGE_init(const hUGESong_t * song);
 
-// driver routine
+// Call from an interrupt handler or a critical section; the compressed-pattern
+// decoder temporarily repurposes SP.
 void hUGE_dosound(void);
 
 enum hUGE_channel_t {HT_CH1 = 0, HT_CH2, HT_CH3, HT_CH4};
