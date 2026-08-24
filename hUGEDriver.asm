@@ -55,25 +55,25 @@ order_cnt: db
 pattern1: dw ; cursor into pattern data bytecode
 pattern_stack_ptr1: dw ; the stack for bytecode calls/returns
 catalog1: dw ; the channel's note catalog
-cached_row1: ds 3
+cached_row1: ds 2 ; instrument/effect and effect parameter
 order1: dw ; the channel's order table
 
 pattern2: dw
 pattern_stack_ptr2: dw
 catalog2: dw
-cached_row2: ds 3
+cached_row2: ds 2
 order2: dw
 
 pattern3: dw
 pattern_stack_ptr3: dw
 catalog3: dw
-cached_row3: ds 3
+cached_row3: ds 2
 order3: dw
 
 pattern4: dw
 pattern_stack_ptr4: dw
 catalog4: dw
-cached_row4: ds 3
+cached_row4: ds 2
 order4: dw
 
 ;; Pointers to the instrument tables
@@ -386,15 +386,7 @@ get_and_advance_current_row:
     ld a, [hl+]
 
     cp 181
-    jr c, .catalog_entry
-
-    cp 254
-    jr c, .literal
-    jr z, .phrase_call
-
-.phrase_return:
-    pop hl
-    jr .pattern_ptr_in_hl
+    jr nc, .non_catalog
 
 .catalog_entry:
     push hl
@@ -414,7 +406,64 @@ get_and_advance_current_row:
     ld c, [hl]
 
     pop hl
-    jr .finish_decode
+
+.finish_decode:
+    push af
+    push bc
+
+    ld d, h
+    ld e, l
+    ;; DE = current bytecode cursor
+
+    ld hl, sp+4
+    ld b, h
+    ld c, l
+    ;; BC = phrase-return stack pointer
+
+    ld hl, pattern_stack_temporary
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    ;; HL = pattern-data struct
+
+    ;; write pattern ptr to patternX
+    ld a, e
+    ld [hl+], a
+    ld a, d
+    ld [hl+], a
+
+    ;; write new stack position to pattern_stack_ptrX
+    ld a, c
+    ld [hl+], a
+    ld a, b
+    ld [hl+], a
+
+    pop bc
+
+    ;; HL is at the catalog pointer; skip it and cache B and C for later ticks
+    inc hl
+    inc hl
+    ld a, b
+    ld [hl+], a
+    ld [hl], c
+
+    pop af
+
+    ld sp, saved_stack
+    pop hl
+    ld sp, hl
+    pop de
+
+    ret
+
+.non_catalog:
+    cp 254
+    jr c, .literal
+    jr z, .phrase_call
+
+.phrase_return:
+    pop hl
+    jr .pattern_ptr_in_hl
 
 .literal:
     sub 181
@@ -435,57 +484,6 @@ get_and_advance_current_row:
     ld h, b
     ld l, c
     jr .pattern_ptr_in_hl
-
-.finish_decode:
-    push af
-    push bc
-    ld d, h
-    ld e, l
-    ;; DE = current bytecode cursor
-
-    ld hl, sp+4
-    ld a, [pattern_stack_temporary]
-    ld c, a
-    ld a, [pattern_stack_temporary+1]
-    ld b, a
-    ;; BC = pattern-data struct
-
-    ;; write pattern ptr to patternX
-    ld a, e
-    ld [bc], a
-    inc bc
-    ld a, d
-    ld [bc], a
-    inc bc
-
-    ;; write new stack position to pattern_stack_ptrX
-    ld a, l
-    ld [bc], a
-    inc bc
-    ld a, h
-    ld [bc], a
-    inc bc
-
-    ld h, b
-    ld l, c
-
-    pop bc
-    pop af
-
-    ;; write cached row
-    inc hl
-    inc hl
-    ld [hl+], a
-    ld [hl], b
-    inc hl
-    ld [hl], c
-
-    ld sp, saved_stack
-    pop hl
-    ld sp, hl
-    pop de
-
-    ret
 
 ;;; Gets the "period" of a pattern's current note.
 ;;; Param: HL = Pointer to the pattern data struct
@@ -1891,7 +1889,6 @@ process_effects:
     checkMute 0, .after_effect1
 
     ld hl, cached_row1
-    ld a, [hl+]
     ld b, [hl]
     inc hl
     ld c, [hl]
@@ -1918,7 +1915,6 @@ process_effects:
     checkMute 1, .after_effect2
 
     ld hl, cached_row2
-    ld a, [hl+]
     ld b, [hl]
     inc hl
     ld c, [hl]
@@ -1944,7 +1940,6 @@ process_effects:
     checkMute 2, .after_effect3
 
     ld hl, cached_row3
-    ld a, [hl+]
     ld b, [hl]
     inc hl
     ld c, [hl]
@@ -1970,7 +1965,6 @@ process_effects:
     checkMute 3, .after_effect4
 
     ld hl, cached_row4
-    ld a, [hl+]
     ld b, [hl]
     inc hl
     ld c, [hl]
