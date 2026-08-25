@@ -30,19 +30,12 @@ MACRO checkMute
     jr nz, \2
 ENDM
 
-MACRO copy_song_pointer
-    ld a, [hl+]
-    ld [\1], a
-    ld a, [hl+]
-    ld [\1 + 1], a
-ENDM
-
 ;; Maximum pattern length
 DEF PATTERN_LENGTH EQU 64
-;; The exporter emits at most 54 acyclic routines. Each active CALL consumes
-;; two bytes, and finishing a note temporarily consumes another four bytes.
-DEF MAX_PATTERN_ROUTINES EQU 54
-DEF PATTERN_STACK_SIZE EQU MAX_PATTERN_ROUTINES * 2 + 4
+;; The exporter limits recursive phrase calls to this depth. Each active CALL
+;; consumes two bytes, and finishing a note temporarily consumes four more.
+DEF MAX_PATTERN_DEPTH EQU 4
+DEF PATTERN_STACK_SIZE EQU MAX_PATTERN_DEPTH * 2 + 4
 
 SECTION "Playback variables", WRAM0
 
@@ -57,35 +50,35 @@ pattern_stack_ptr1: dw ; the stack for bytecode calls/returns
 catalog1: dw ; the channel's note catalog
 cached_row1: ds 2 ; instrument/effect and effect parameter
 order1: dw ; the channel's order table
+pattern_stack1: ds PATTERN_STACK_SIZE
 
 pattern2: dw
 pattern_stack_ptr2: dw
 catalog2: dw
 cached_row2: ds 2
 order2: dw
+pattern_stack2: ds PATTERN_STACK_SIZE
 
 pattern3: dw
 pattern_stack_ptr3: dw
 catalog3: dw
 cached_row3: ds 2
 order3: dw
+pattern_stack3: ds PATTERN_STACK_SIZE
 
 pattern4: dw
 pattern_stack_ptr4: dw
 catalog4: dw
 cached_row4: ds 2
 order4: dw
+pattern_stack4: ds PATTERN_STACK_SIZE
+
+DEF PATTERN_CHANNEL_STRIDE EQU pattern2 - pattern1
 
 ;; Pointers to the instrument tables
 duty_instruments: dw
 wave_instruments: dw
 noise_instruments: dw
-
-;; The actual stacks for the pattern stacks
-pattern_stack1: ds PATTERN_STACK_SIZE
-pattern_stack2: ds PATTERN_STACK_SIZE
-pattern_stack3: ds PATTERN_STACK_SIZE
-pattern_stack4: ds PATTERN_STACK_SIZE
 
 ;; Misc. pointers
 routines: dw
@@ -197,31 +190,38 @@ ENDC
 ;;; Destroys: AF C DE HL
 hUGE_init::
     ld de, ticks_per_row
-
-REPT 4
+    ld c, 4
+.copy_tempo:
     ld a, [hl+] ; tempo
     ld [de], a
     inc de
-ENDR
+    dec c
+    jr nz, .copy_tempo
 
     ld a, [hl+]
     ld [order_cnt], a
 
-    ;; The exported descriptor groups pointers by kind, while mutable pattern
-    ;; state is interleaved by channel in WRAM. Scatter the descriptor fields.
-    copy_song_pointer order1
-    copy_song_pointer order2
-    copy_song_pointer order3
-    copy_song_pointer order4
-    copy_song_pointer catalog1
-    copy_song_pointer catalog2
-    copy_song_pointer catalog3
-    copy_song_pointer catalog4
-    copy_song_pointer duty_instruments
-    copy_song_pointer wave_instruments
-    copy_song_pointer noise_instruments
-    copy_song_pointer routines
-    copy_song_pointer waves
+    ;; The descriptor groups pointers by kind, while mutable pattern state is
+    ;; interleaved by channel. Copy through a compact destination table.
+    push bc
+    ld de, song_pointer_destinations
+.copy_song_pointer:
+    ld a, [de]
+    inc de
+    ld c, a
+    ld a, [de]
+    inc de
+    ld b, a
+    or c
+    jr z, .copied_song_pointers
+    ld a, [hl+]
+    ld [bc], a
+    inc bc
+    ld a, [hl+]
+    ld [bc], a
+    jr .copy_song_pointer
+.copied_song_pointers:
+    pop bc
 
 IF DEF(PREVIEW_MODE)
     ;; Keep the tracker-owned preview controls, but never inherit channel or
@@ -251,15 +251,41 @@ ENDC
 
 ;; Preview mode needs to load the order ID from memory
 IF DEF(PREVIEW_MODE)
-    ;; Compressed patterns can only resume at pattern boundaries.
-    xor a
+    ;; The tracker writes the requested starting row before hUGE_init runs.
+    ;; Save it as a countdown, start each compressed stream at its pattern,
+    ;; then decode and discard the preceding rows to reconstruct the cursors
+    ;; and phrase-return stacks.
+    ld a, [row]
     ld [counter], a
+    xor a
     ld [row], a
     ld [tick], a
     ld [row_break], a
     ld [next_order], a
     ld a, [current_order]
     ld c, a
+    call load_patterns
+
+    ld a, [counter]
+    and a
+    ret z
+
+.seek_preview_row:
+    ld hl, pattern1
+    call get_and_advance_current_row
+    ld hl, pattern2
+    call get_and_advance_current_row
+    ld hl, pattern3
+    call get_and_advance_current_row
+    ld hl, pattern4
+    call get_and_advance_current_row
+
+    ld hl, row
+    inc [hl]
+    ld hl, counter
+    dec [hl]
+    jr nz, .seek_preview_row
+    ret
 ELSE
     ld c, 0
 ENDC
@@ -273,39 +299,10 @@ IF DEF(PREVIEW_MODE)
     db $fc ; signal order update to tracker
 ENDC
 
+    push bc
     ld hl, order1
     ld de, pattern1
-    call .load_pattern
-    ld a, LOW(pattern_stack1 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr1], a
-    ld a, HIGH(pattern_stack1 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr1 + 1], a
-
-    ld hl, order2
-    ld de, pattern2
-    call .load_pattern
-    ld a, LOW(pattern_stack2 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr2], a
-    ld a, HIGH(pattern_stack2 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr2 + 1], a
-
-    ld hl, order3
-    ld de, pattern3
-    call .load_pattern
-    ld a, LOW(pattern_stack3 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr3], a
-    ld a, HIGH(pattern_stack3 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr3 + 1], a
-
-    ld hl, order4
-    ld de, pattern4
-    call .load_pattern
-    ld a, LOW(pattern_stack4 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr4], a
-    ld a, HIGH(pattern_stack4 + PATTERN_STACK_SIZE)
-    ld [pattern_stack_ptr4 + 1], a
-    ret
-
+    ld b, 4
 .load_pattern:
     ld a, [hl+]
     add c
@@ -323,7 +320,36 @@ ENDC
     ld a, [hl]
     ld [de], a
     inc de
+
+    ;; DE now points at this channel's phrase-stack pointer. Initialize it to
+    ;; the end of the stack, which immediately follows the channel state.
+    ld hl, PATTERN_CHANNEL_STRIDE - 2
+    add hl, de
+    ld a, l
+    ld [de], a
+    inc de
+    ld a, h
+    ld [de], a
+    inc de
+
+    ;; The top of one stack is the next channel state. Advance HL from there
+    ;; to that channel's order pointer.
+    ld d, h
+    ld e, l
+    ld a, order1 - pattern1
+    add_a_to_r16 hl
+
+    dec b
+    jr nz, .load_pattern
+    pop bc
     ret
+
+song_pointer_destinations:
+    dw order1, order2, order3, order4
+    dw catalog1, catalog2, catalog3, catalog4
+    dw duty_instruments, wave_instruments, noise_instruments
+    dw routines, waves
+    dw 0
 
 IF DEF(GBDK)
 _hUGE_mute_channel::
