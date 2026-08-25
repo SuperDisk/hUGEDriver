@@ -793,11 +793,9 @@ do_table:
     ;; If there's a jump, change the current row
     ld a, b
     and $F0
-    bit 7, d
-    jr z, .no_steal
-    res 7, d
-    set 0, a
-.no_steal:
+    rlc d       ; move the table-steal bit into bit 0 and carry
+    srl d       ; restore the note with bit 7 cleared, preserving carry
+    adc a, 0    ; add the table-steal bit to the jump value
     swap a
     jr z, .no_jump
     dec a
@@ -935,8 +933,8 @@ fx_call_routine:
     add [hl]
     ld e, a
     inc hl
-    ld a, $0
     adc [hl]
+    sub e
     ld h, a
     ld l, e
 
