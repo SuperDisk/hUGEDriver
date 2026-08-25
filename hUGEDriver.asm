@@ -1154,7 +1154,7 @@ note_cut:
 
     ;; Retrigger note
     inc l ; Not `inc hl` because H stays constant (= $FF)
-    ld [hl], $FF
+    ld [hl], h ; ld [hl], $FF (because h=$FF)
     ret
 
 
