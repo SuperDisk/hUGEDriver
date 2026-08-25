@@ -572,16 +572,14 @@ get_note_poly:
     cp 7
     ret c
 
-    ld h, a
-
-    ; B := (A-4) div 4;
-    srl a
-    srl a
-    dec a
     ld l, a
 
+    ; B := (A-4) div 4;
+    srl l
+    srl l
+    dec l
+
     ; C := (A mod 4)+4;
-    ld a, h
     and 3 ; mod 4
     add 4
 
@@ -2072,8 +2070,11 @@ IF DEF(PREVIEW_MODE)
     ld a, [loop_order]
     and a
     jr z, .no_loop_order
-    xor a
-    jr .noreset
+    ;; Reinitialize the compressed streams as well as the visible row.
+    ;; Merely setting row to zero would leave every bytecode cursor at the
+    ;; end of the pattern.
+    ld a, [current_order]
+    jr .update_current_order
 .no_loop_order:
 ENDC
     ;; Increment order and change loaded patterns
