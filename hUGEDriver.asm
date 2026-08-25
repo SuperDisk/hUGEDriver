@@ -30,8 +30,6 @@ MACRO checkMute
     jr nz, \2
 ENDM
 
-;; Maximum pattern length
-DEF PATTERN_LENGTH EQU 64
 ;; The exporter limits recursive phrase calls to this depth. Each active CALL
 ;; consumes two bytes, and finishing a note temporarily consumes four more.
 DEF MAX_PATTERN_DEPTH EQU 4
@@ -41,6 +39,7 @@ SECTION "Playback variables", WRAM0
 
 ;; Active song descriptor
 order_cnt: db
+pattern_length: db
 
 ;; Per-channel compressed pattern state. The first four fields must retain
 ;; this layout because get_and_advance_current_row accesses them as a struct.
@@ -200,6 +199,8 @@ hUGE_init::
 
     ld a, [hl+]
     ld [order_cnt], a
+    ld a, [hl+]
+    ld [pattern_length], a
 
     ;; The descriptor groups pointers by kind, while mutable pattern state is
     ;; interleaved by channel. Copy through a compact destination table.
@@ -2059,7 +2060,8 @@ ENDC
     ;; Increment row.
     ld a, [row]
     inc a
-    cp PATTERN_LENGTH
+    ld hl, pattern_length
+    cp [hl]
     jr nz, .noreset
 
     ld b, 0

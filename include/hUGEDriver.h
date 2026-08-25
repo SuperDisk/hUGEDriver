@@ -110,6 +110,8 @@ typedef struct hUGENoiseInstr_t {
 typedef struct hUGESong_t {
   const unsigned char tempo1, tempo2, tempo3, tempo4;
   const unsigned char order_cnt;
+  // Number of decoded rows per pattern (1..64).
+  const unsigned char pattern_length;
   const unsigned char ** order1, ** order2, ** order3, ** order4;
   const unsigned char * note_catalog1, * note_catalog2;
   const unsigned char * note_catalog3, * note_catalog4;
