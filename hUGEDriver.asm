@@ -331,7 +331,6 @@ ENDC
     inc de
     ld a, h
     ld [de], a
-    inc de
 
     ;; The top of one stack is the next channel state. Advance HL from there
     ;; to that channel's order pointer.
