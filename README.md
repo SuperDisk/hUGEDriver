@@ -11,7 +11,8 @@ If you want help using the tracker, driver, or just want to chat, join the [hUGE
 2. Choose a *song descriptor* name. This is what you will refer to the song as in your code. It must be a valid RGBDS symbol.
 3. Place the exported `.asm` file in your RGBDS project.
 4. Load `hl` with your song descriptor name, and `call hUGE_init`
-5. In your game's main loop or in a VBlank interrupt, `call hUGE_dosound`
+5. From a VBlank or timer interrupt, `call hUGE_dosound`. If calling it from
+   the main loop instead, keep interrupts disabled for the duration of the call.
 6. When assembling your game, be sure to specify your music file and hUGEDriver.asm in your call to `rgbasm`/`rgblink`!
 
 Be sure to enable sound playback before you start!
@@ -35,7 +36,8 @@ See the `rgbds_example` directory for a working example!
 4. `#include "hUGEDriver.h"` in your game's main file
 5. Define `extern const hUGESong_t your_song_descriptor_here` in your game's main file
 6. Call `hUGE_init(&your_song_descriptor_here)` in your game's main file
-7. In your game's main loop or in a VBlank interrupt, call `hUGE_dosound`
+7. From a VBlank or timer interrupt, call `hUGE_dosound`. If calling it from
+   the main loop instead, use a critical section around the call.
 8. When compiling your game, be sure to specify your music file and `hUGEDriver.o` in your call to `lcc`!
 
 Be sure to enable sound playback before you start!
@@ -52,7 +54,7 @@ See `gbdk_example/src/gbdk_player_example.c` for a working example!
 
 This driver is suitable for use in homebrew games. hUGETracker exports data representing the various components of a song, as well as a *song descriptor* which is a small block of pointers that tell the driver how to initialize and play a song.
 
-hUGETracker can export the data and song descriptor as a `.asm` or `.c` for use in RGBDS or GBDK based projects, respectively. Playing a song is as simple as calling hUGE_init with a pointer to your song descriptor, and then calling `hUGE_dosound` at a regular interval (usually on VBlank, the timer interrupt, or simply in your game's main loop)
+hUGETracker can export the data and song descriptor as a `.asm` or `.c` for use in RGBDS or GBDK based projects, respectively. Playing a song is as simple as calling hUGE_init with a pointer to your song descriptor, and then calling `hUGE_dosound` at a regular interval, usually from a VBlank or timer interrupt. Calls made from the main loop must run with interrupts disabled because the pattern decoder temporarily uses SP as its phrase-return stack.
 
 In assembly:
 ```asm

@@ -4,10 +4,13 @@ SECTION "Song Data", ROMX
 
 ;; song descriptor
 
+song_descriptor:
 SONG_DESCRIPTOR::
-db TICKS  ; tempo
-dw order_cnt
+db TICKS0, TICKS1, TICKS2, TICKS3
+db ORDER_COUNT
+db PATTERN_LENGTH
 dw order1, order2, order3, order4
+dw note_catalog1, note_catalog2, note_catalog3, note_catalog4
 dw duty_instruments, wave_instruments, noise_instruments
 dw routines
 dw waves

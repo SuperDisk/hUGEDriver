@@ -30,18 +30,49 @@ MACRO checkMute
     jr nz, \2
 ENDM
 
-;; Maximum pattern length
-DEF PATTERN_LENGTH EQU 64
+;; The exporter limits recursive phrase calls to this depth. Each active CALL
+;; consumes two bytes, and finishing a note temporarily consumes four more.
+DEF MAX_PATTERN_DEPTH EQU 4
+DEF PATTERN_STACK_SIZE EQU MAX_PATTERN_DEPTH * 2 + 4
 
 SECTION "Playback variables", WRAM0
+
 ;; Active song descriptor
 order_cnt: db
-_start_song_descriptor_pointers:
-;; Pointers to the song's current four orders (one per channel)
-order1: dw
+pattern_length: db
+
+;; Per-channel compressed pattern state. The first four fields must retain
+;; this layout because get_and_advance_current_row accesses them as a struct.
+
+pattern1: dw ; cursor into pattern data bytecode
+pattern_stack_ptr1: dw ; the stack for bytecode calls/returns
+catalog1: dw ; the channel's note catalog
+cached_row1: ds 2 ; instrument/effect and effect parameter
+order1: dw ; the channel's order table
+pattern_stack1: ds PATTERN_STACK_SIZE
+
+pattern2: dw
+pattern_stack_ptr2: dw
+catalog2: dw
+cached_row2: ds 2
 order2: dw
+pattern_stack2: ds PATTERN_STACK_SIZE
+
+pattern3: dw
+pattern_stack_ptr3: dw
+catalog3: dw
+cached_row3: ds 2
 order3: dw
+pattern_stack3: ds PATTERN_STACK_SIZE
+
+pattern4: dw
+pattern_stack_ptr4: dw
+catalog4: dw
+cached_row4: ds 2
 order4: dw
+pattern_stack4: ds PATTERN_STACK_SIZE
+
+DEF PATTERN_CHANNEL_STRIDE EQU pattern2 - pattern1
 
 ;; Pointers to the instrument tables
 duty_instruments: dw
@@ -51,16 +82,12 @@ noise_instruments: dw
 ;; Misc. pointers
 routines: dw
 waves: dw
-_end_song_descriptor_pointers:
 
-;; Pointers to the current patterns (sort of a cache)
-pattern1: dw
-pattern2: dw
-pattern3: dw
-pattern4: dw
+pattern_stack_temporary: dw
+saved_stack: dw
 
 ;; How long a row lasts in ticks (1 = one row per call to `hUGE_dosound`, etc. 0 translates to 256)
-ticks_per_row: db
+ticks_per_row: ds 4
 
 _hUGE_current_wave::
 hUGE_current_wave::
@@ -161,36 +188,58 @@ ENDC
 ;;; Param: HL = Pointer to the "song descriptor" you wish to load (typically exported by hUGETracker).
 ;;; Destroys: AF C DE HL
 hUGE_init::
+    ld de, ticks_per_row
+    ld c, 4
+.copy_tempo:
     ld a, [hl+] ; tempo
-    ld [ticks_per_row], a
-
-    ld a, [hl+]
-    ld e, a
-    ld a, [hl+]
-    ld d, a
-    ld a, [de]
-    ld [order_cnt], a
-
-    ld c, _end_song_descriptor_pointers - (_start_song_descriptor_pointers)
-    ld de, order1
-
-.copy_song_descriptor_loop:
-    ld a, [hl+]
     ld [de], a
     inc de
     dec c
-    jr nz, .copy_song_descriptor_loop
+    jr nz, .copy_tempo
 
-IF !DEF(PREVIEW_MODE)
-    ;; Zero some ram
+    ld a, [hl+]
+    ld [order_cnt], a
+    ld a, [hl+]
+    ld [pattern_length], a
+
+    ;; The descriptor groups pointers by kind, while mutable pattern state is
+    ;; interleaved by channel. Copy through a compact destination table.
+    push bc
+    ld de, song_pointer_destinations
+.copy_song_pointer:
+    ld a, [de]
+    inc de
+    ld c, a
+    ld a, [de]
+    inc de
+    ld b, a
+    or c
+    jr z, .copied_song_pointers
+    ld a, [hl+]
+    ld [bc], a
+    inc bc
+    ld a, [hl+]
+    ld [bc], a
+    jr .copy_song_pointer
+.copied_song_pointers:
+    pop bc
+
+IF DEF(PREVIEW_MODE)
+    ;; Keep the tracker-owned preview controls, but never inherit channel or
+    ;; instrument-table state from a previous initialization.
+    ld c, end_zero - channels
+    ld hl, channels
+ELSE
     ld c, end_zero - start_zero
     ld hl, start_zero
+ENDC
+
+    ;; Zero runtime state.
     xor a
 .fill_loop:
     ld [hl+], a
     dec c
     jr nz, .fill_loop
-ENDC
 
     ;; These two are zero-initialized by the loop above, so these two writes must come after
     ld a, %11110000
@@ -202,11 +251,44 @@ ENDC
     ld [current_wave], a
 
 ;; Preview mode needs to load the order ID from memory
-IF !DEF(PREVIEW_MODE)
-    ld c, 0
-ELSE
+IF DEF(PREVIEW_MODE)
+    ;; The tracker writes the requested starting row before hUGE_init runs.
+    ;; Save it as a countdown, start each compressed stream at its pattern,
+    ;; then decode and discard the preceding rows to reconstruct the cursors
+    ;; and phrase-return stacks.
+    ld a, [row]
+    ld [counter], a
+    xor a
+    ld [row], a
+    ld [tick], a
+    ld [row_break], a
+    ld [next_order], a
     ld a, [current_order]
     ld c, a
+    call load_patterns
+
+    ld a, [counter]
+    and a
+    ret z
+
+.seek_preview_row:
+    ld hl, pattern1
+    call get_and_advance_current_row
+    ld hl, pattern2
+    call get_and_advance_current_row
+    ld hl, pattern3
+    call get_and_advance_current_row
+    ld hl, pattern4
+    call get_and_advance_current_row
+
+    ld hl, row
+    inc [hl]
+    ld hl, counter
+    dec [hl]
+    jr nz, .seek_preview_row
+    ret
+ELSE
+    ld c, 0
 ENDC
     ;; fallthrough (load the pattern pointers)
 
@@ -218,22 +300,15 @@ IF DEF(PREVIEW_MODE)
     db $fc ; signal order update to tracker
 ENDC
 
+    push bc
     ld hl, order1
     ld de, pattern1
-    call .load_pattern
-
-    ld hl, order2
-    call .load_pattern
-
-    ld hl, order3
-    call .load_pattern
-
-    ld hl, order4
-    ;; fallthrough
-
+    ld b, 4
 .load_pattern:
     ld a, [hl+]
     add c
+
+    ;; HL = [HL]*2
     ld h, [hl]
     ld l, a
     adc h
@@ -246,7 +321,35 @@ ENDC
     ld a, [hl]
     ld [de], a
     inc de
+
+    ;; DE now points at this channel's phrase-stack pointer. Initialize it to
+    ;; the end of the stack, which immediately follows the channel state.
+    ld hl, PATTERN_CHANNEL_STRIDE - 2
+    add hl, de
+    ld a, l
+    ld [de], a
+    inc de
+    ld a, h
+    ld [de], a
+
+    ;; The top of one stack is the next channel state. Advance HL from there
+    ;; to that channel's order pointer.
+    ld d, h
+    ld e, l
+    ld a, order1 - pattern1
+    add_a_to_r16 hl
+
+    dec b
+    jr nz, .load_pattern
+    pop bc
     ret
+
+song_pointer_destinations:
+    dw order1, order2, order3, order4
+    dw catalog1, catalog2, catalog3, catalog4
+    dw duty_instruments, wave_instruments, noise_instruments
+    dw routines, waves
+    dw 0
 
 IF DEF(GBDK)
 _hUGE_mute_channel::
@@ -262,52 +365,155 @@ ENDC
 ;;; Param: C = 0 to unmute the channel, 1 to mute it
 ;;; Destroy: A C E HL
 hUGE_mute_channel::
-    ld e, $fe
-    ld a, b
-    or a
-    jr z, .enable_cut
+    ld a, $7F                ;compensate for 1st shift
+    ld e, b                 ;channels to E
+    inc e                   ;channels range 1..4
+    db $21                  ;ld hl,nn to skip 2 byte sla c
 .enable_loop:
     sla c
-    rlc e
-    dec a
+    rlca
+    dec e
     jr nz, .enable_loop
+
 .enable_cut:
-    ld a, [mute_channels]
-    and e
-    or  c
-    ld [mute_channels], a
+    ld hl, mute_channels
+    and [hl]
+    or c
+    ld [hl], a
     and c
     jp nz, note_cut
     ret
 
 
-;;; Reads a pattern's current row.
-;;; Param: BC = Pointer to the pattern
-;;; Param: [row] = Index of the current row
+;;; Decodes and advances a compressed pattern by one row.
+;;; Interrupts must remain disabled while this runs: SP temporarily becomes
+;;; the channel's phrase-return stack. The bundled players call dosound in an
+;;; interrupt handler, where IME is already off.
+;;; Param: HL = Pointer to the pattern data struct
 ;;; Return: A = Note ID
 ;;; Return: B = Instrument (upper nibble) & effect code (lower nibble)
 ;;; Return: C = Effect parameter
 ;;; Destroy: HL
-get_current_row:
-    ld a, [row]
-.row_in_a:
-    ld h, a
-    ;; Multiply by 3 for the note value
-    add h
-    add h
+get_and_advance_current_row:
+    push de
+    ld [saved_stack], sp
+    ld sp, hl
+    ld [pattern_stack_temporary], sp
+    pop bc
+    pop hl
+    pop de
+    ld sp, hl
+    ld h, b
+    ld l, c
+    ;; HL = pattern data pointer
+    ;; SP = pattern stack
+    ;; DE = catalog pointer
 
-    ld h, 0
+.pattern_ptr_in_hl:
+    ld a, [hl+]
+
+    cp 181
+    jr nc, .non_catalog
+
+.catalog_entry:
+    push hl
+
+    ld c, a
+    ld b, 0
     ld l, a
-    add hl, bc ; HL now points at the 3rd byte of the note
+    ld h, b ; ld h, 0
+
+    add hl, hl       ; index * 2
+    add hl, bc       ; index * 3
+    add hl, de       ; += catalog pointer
+
     ld a, [hl+]
     ld b, [hl]
     inc hl
     ld c, [hl]
+
+    pop hl
+
+.finish_decode:
+    push af
+    push bc
+
+    ld d, h
+    ld e, l
+    ;; DE = current bytecode cursor
+
+    ld hl, sp+4
+    ld b, h
+    ld c, l
+    ;; BC = phrase-return stack pointer
+
+    ld hl, pattern_stack_temporary
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    ;; HL = pattern-data struct
+
+    ;; write pattern ptr to patternX
+    ld a, e
+    ld [hl+], a
+    ld a, d
+    ld [hl+], a
+
+    ;; write new stack position to pattern_stack_ptrX
+    ld a, c
+    ld [hl+], a
+    ld a, b
+    ld [hl+], a
+
+    pop bc
+
+    ;; HL is at the catalog pointer; skip it and cache B and C for later ticks
+    inc hl
+    inc hl
+    ld a, b
+    ld [hl+], a
+    ld [hl], c
+
+    pop af
+
+    ld sp, saved_stack
+    pop hl
+    ld sp, hl
+    pop de
+
     ret
 
+.non_catalog:
+    cp 254
+    jr c, .literal
+    jr z, .phrase_call
+
+.phrase_return:
+    pop hl
+    jr .pattern_ptr_in_hl
+
+.literal:
+    sub 181
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
+    inc hl
+    jr .finish_decode
+
+.phrase_call:
+    ld a, [hl+]
+    ld c, a
+    ld a, [hl+]
+    ld b, a
+    ;; BC = target, HL = return address
+
+    push hl
+    ld h, b
+    ld l, c
+    jr .pattern_ptr_in_hl
+
 ;;; Gets the "period" of a pattern's current note.
-;;; Param: HL = Pointer to the pattern pointer
-;;; Param: [row] = Index of the current row
+;;; Param: HL = Pointer to the pattern data struct
 ;;; Param: DE = Location to write the note's index to, if applicable
 ;;; Return: HL = Note's period
 ;;; Return: CF = Set if and only if a "valid" note (i.e. not a "rest")
@@ -316,11 +522,7 @@ get_current_row:
 ;;; Return: C = Effect parameter
 ;;; Destroy: AF
 get_current_note:
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
-
-    call get_current_row
+    call get_and_advance_current_row
     ld hl, 0
 
     ;; If the note we found is greater than LAST_NOTE, then it's not a valid note
@@ -371,16 +573,14 @@ get_note_poly:
     cp 7
     ret c
 
-    ld h, a
-
-    ; B := (A-4) div 4;
-    srl a
-    srl a
-    dec a
     ld l, a
 
+    ; B := (A-4) div 4;
+    srl l
+    srl l
+    dec l
+
     ; C := (A mod 4)+4;
-    ld a, h
     and 3 ; mod 4
     add 4
 
@@ -575,7 +775,17 @@ do_table:
 
     ;; Grab the cell values, return if no note.
     ;; Save BC for doing effects.
-    call get_current_row.row_in_a
+    ld h, a
+    add h
+    add h
+    ld h, 0
+    ld l, a
+    add hl, bc
+    ld a, [hl+]
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
+
     pop hl ; TODO: don't trash HL in the first place
     push bc
 
@@ -584,11 +794,9 @@ do_table:
     ;; If there's a jump, change the current row
     ld a, b
     and $F0
-    bit 7, d
-    jr z, .no_steal
-    res 7, d
-    set 0, a
-.no_steal:
+    rlc d       ; move the table-steal bit into bit 0 and carry
+    srl d       ; restore the note with bit 7 cleared, preserving carry
+    adc a, 0    ; add the table-steal bit to the jump value
     swap a
     jr z, .no_jump
     dec a
@@ -726,8 +934,8 @@ fx_call_routine:
     add [hl]
     ld e, a
     inc hl
-    ld a, $0
     adc [hl]
+    sub e
     ld h, a
     ld l, e
 
@@ -847,7 +1055,11 @@ fx_set_speed:
     ret nz
 
     ld a, c
-    ld [ticks_per_row], a
+    ld hl, ticks_per_row
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl], c
     ret
 
 
@@ -876,12 +1088,13 @@ fx_pos_jump:
 
 
 ;;; Processes (global) effect D, "pattern break".
-;;; Param: C = ID of the next order's row to start on
+;;; The row parameter is intentionally ignored; compressed patterns always
+;;; begin decoding at row zero.
 ;;; Destroy: A
 fx_pattern_break:
     ret nz
 
-    ld a, c
+    ld a, 1
     ld [row_break], a
     ret
 
@@ -933,7 +1146,7 @@ note_cut:
 
     ;; Retrigger note
     inc l ; Not `inc hl` because H stays constant (= $FF)
-    ld [hl], $FF
+    ld [hl], h ; ld [hl], $FF (because h=$FF)
     ret
 
 
@@ -1603,10 +1816,7 @@ process_ch3:
 
 process_ch4:
     ld hl, pattern4
-    ld a, [hl+]
-    ld c, a
-    ld b, [hl]
-    call get_current_row
+    call get_and_advance_current_row
     cp LAST_NOTE
 
     push af ; Save carry for conditonally calling note
@@ -1683,11 +1893,10 @@ process_effects:
     ;; Only do effects if not on tick zero
     checkMute 0, .after_effect1
 
-    ld hl, pattern1
-    ld a, [hl+]
-    ld c, a
+    ld hl, cached_row1
     ld b, [hl]
-    call get_current_row
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -1710,11 +1919,10 @@ process_effects:
 .process_ch2:
     checkMute 1, .after_effect2
 
-    ld hl, pattern2
-    ld a, [hl+]
-    ld c, a
+    ld hl, cached_row2
     ld b, [hl]
-    call get_current_row
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -1736,11 +1944,10 @@ process_effects:
 .process_ch3:
     checkMute 2, .after_effect3
 
-    ld hl, pattern3
-    ld a, [hl+]
-    ld c, a
+    ld hl, cached_row3
     ld b, [hl]
-    call get_current_row
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -1762,11 +1969,10 @@ process_effects:
 .process_ch4:
     checkMute 3, .after_effect4
 
-    ld hl, pattern4
-    ld a, [hl+]
-    ld c, a
+    ld hl, cached_row4
     ld b, [hl]
-    call get_current_row
+    inc hl
+    ld c, [hl]
 
     ld a, c
     or a
@@ -1789,6 +1995,13 @@ tick_time:
 IF DEF(PREVIEW_MODE)
     db $f4 ; signal tick to tracker
 ENDC
+
+    ld a, [row]
+    and 3
+    ld hl, ticks_per_row
+    add_a_to_r16 hl
+    ld b, [hl]
+
     ld hl, counter
     inc [hl]
 
@@ -1797,7 +2010,7 @@ ENDC
     inc [hl] ; Increment tick counter
 
     ;; Should we switch to the next row?
-    ld a, [ticks_per_row]
+    ld a, b
     sub [hl]
     ret nz ; Nope.
     ld [hl+], a ; Reset tick to 0
@@ -1829,7 +2042,8 @@ ENDC
     ;; Increment row.
     ld a, [row]
     inc a
-    cp PATTERN_LENGTH
+    ld hl, pattern_length
+    cp [hl]
     jr nz, .noreset
 
     ld b, 0
@@ -1838,8 +2052,11 @@ IF DEF(PREVIEW_MODE)
     ld a, [loop_order]
     and a
     jr z, .no_loop_order
-    xor a
-    jr .noreset
+    ;; Reinitialize the compressed streams as well as the visible row.
+    ;; Merely setting row to zero would leave every bytecode cursor at the
+    ;; end of the pattern.
+    ld a, [current_order]
+    jr .update_current_order
 .no_loop_order:
 ENDC
     ;; Increment order and change loaded patterns
@@ -1853,7 +2070,8 @@ ENDC
 .update_current_order:
     ;; Call with:
     ;; A: The order to load
-    ;; B: The row for the order to start on
+    ;; B: Always 0; compressed patterns only support pattern-level jumps
+    ld b, 0
     ld [current_order], a
     ld c, a
     call load_patterns

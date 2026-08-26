@@ -77,5 +77,5 @@ DEF A_8 EQU 69
 DEF A#8 EQU 70
 DEF B_8 EQU 71
 DEF LAST_NOTE EQU 72
-DEF ___ EQU 90 ; the default "no note" value
+DEF ___ EQU 72 ; the default "no note" value
 DEF NO_NOTE EQU ___

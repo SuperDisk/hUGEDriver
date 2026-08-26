@@ -1,4 +1,5 @@
-A hUGEDriver pattern is a series of 64 rows in this format:
+A hUGEDriver pattern decodes to the number of rows stored in the song
+descriptor. Each decoded row has this format:
 
   Note     Instr    Effect
 NNNNNNNN, IIIIEEEE, XXXXYYYY
