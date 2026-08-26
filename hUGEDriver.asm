@@ -366,20 +366,21 @@ ENDC
 ;;; Param: C = 0 to unmute the channel, 1 to mute it
 ;;; Destroy: A C E HL
 hUGE_mute_channel::
-    ld e, $fe
-    ld a, b
-    or a
-    jr z, .enable_cut
+    ld a, $7F                ;compensate for 1st shift
+    ld e, b                 ;channels to E
+    inc e                   ;channels range 1..4
+    db $21                  ;ld hl,nn to skip 2 byte sla c
 .enable_loop:
     sla c
-    rlc e
-    dec a
+    rlca
+    dec e
     jr nz, .enable_loop
+
 .enable_cut:
-    ld a, [mute_channels]
-    and e
-    or  c
-    ld [mute_channels], a
+    ld hl, mute_channels
+    and [hl]
+    or c
+    ld [hl], a
     and c
     jp nz, note_cut
     ret
